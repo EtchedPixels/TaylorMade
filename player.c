@@ -23,6 +23,7 @@ static int ImageLen;
 static int VerbBase;
 static unsigned int TokenBase;
 static unsigned int MessageBase;
+static unsigned int Message2Base;
 static unsigned int RoomBase;
 static unsigned int ObjectBase;
 static unsigned int ExitBase;
@@ -114,12 +115,12 @@ static char *Action[]={
 	"MEANS",
 	"PUTWITH",
 	"BEEP",		/* Rebel Planet at least */
-	"REFRESH?"
-	"ACT32",
+	"REFRESH?",
 	"RAMSAVE",
 	"RAMLOAD",
-	"ACT35",
+	"ACT34",
 	"OOPS",
+	"ACT36",
 	"ACT37",
 	"ACT38",
 	"ACT39",
@@ -152,11 +153,11 @@ static void LoadWordTable(void)
 static void PrintWord(unsigned char word)
 {
 	if(word == 126)
-		printf("*    ");
+		fprintf(stderr, "*    ");
 	else if(word == 0 || WordMap[word][0] == 0)
-		printf("%-4d ", word);
+		fprintf(stderr, "%-4d ", word);
 	else {
-		printf("%c%c%c%c ", 
+		fprintf(stderr, "%c%c%c%c ",
 			WordMap[word][0],
 			WordMap[word][1],
 			WordMap[word][2],
@@ -303,6 +304,8 @@ static void OutCaps(void)
 
 static void OutChar(char c)
 {
+	if(c == ']')
+		c = '\n';
 	if(c == ' ') {
 		PendSpace = 1;
 		return;
@@ -429,6 +432,8 @@ static int FindMessages(void)
 	while((pos = FindCode("\xF5\xE5\xC5\xD5\x78\x32", pos+1)) != -1) {
 		if(Image[pos + 8] != 0x21)
 			continue;
+		if(Image[pos + 11] != 0xCD)
+			continue;
 		/* End markers in compressed blocks */
 		GameVersion = 0;
 		return (Image[pos+9] + (Image[pos+10] << 8)) - 0x4000;
@@ -437,9 +442,30 @@ static int FindMessages(void)
 	exit(1);
 }
 
+static int FindMessages2(void)
+{
+	int pos = 0;
+	while((pos = FindCode("\xF5\xE5\xC5\xD5\x78\x32", pos+1)) != -1) {
+		if(Image[pos + 8] != 0x21)
+			continue;
+		if(Image[pos + 11] != 0xC3)
+			continue;
+		return (Image[pos+9] + (Image[pos+10] << 8)) - 0x4000;
+	}
+	fprintf(stderr, "No second message block ?\n");
+	return 0;
+}
+
 static void Message(unsigned char m)
 {
 	unsigned char *p = Image + MessageBase;
+	PrintText(p, m);
+}
+
+static void Message2(unsigned int m)
+{
+	unsigned char *p = Image + Message2Base;
+	printf("MESSAGE2 %d %d\n", Message2Base, m);
 	PrintText(p, m);
 }
 
@@ -571,7 +597,7 @@ static void NewGame(void)
 	memcpy(Object, Image + ObjLocBase, NumObjects());
 }
 
-static void RamLoad(void)
+void RamLoad(void)
 {
 	memcpy(Flag, RamFlag, 128);
 	memcpy(Object, RamObject, 256);
@@ -859,11 +885,15 @@ static void ExecuteLineCode(unsigned char *p)
 			break;
 		p++;
 		arg1 = *p++;
-/*		printf("%s %d ", Condition[op], arg1); */
+#ifdef DEBUG
+		fprintf(stderr, "%s %d ", Condition[op], arg1);
+#endif
 		if(op > 20)
 		{
 			arg2 = *p++;
-/*			printf("%d ", arg2); */
+#ifdef DEBUG
+			fprintf(stderr, "%d ", arg2);
+#endif
 		}
 		switch(op) {
 			case 1:
@@ -978,7 +1008,9 @@ static void ExecuteLineCode(unsigned char *p)
 					op);
 				break;
 		}
-/*		printf("\n"); */
+#ifdef DEBUG
+		fprintf(stderr, "\n");
+#endif
 		return;
 	} while(1);
 	
@@ -988,10 +1020,13 @@ static void ExecuteLineCode(unsigned char *p)
 		unsigned char op = *p;
 		if(!(op & 0x80))
 			break;
+
+#ifdef DEBUG
+		if(op & 0x40)
+			fprintf(stderr, "DONE:");
+		fprintf(stderr,"%s(%d) ", Action[op & 0x3F], op & 0x3F);
+#endif
 		
-/*		if(op & 0x40)
-			printf("DONE:"); 
-		printf("%s ", Action[op & 0x3F]); */
 		p++;
 		if(op & 0x40)
 			ActionsDone = 1;
@@ -1000,11 +1035,15 @@ static void ExecuteLineCode(unsigned char *p)
 		
 		if(op > 8) {
 			arg1 = *p++;
-/*			printf("%d ", arg1); */
+#ifdef DEBUG
+			fprintf(stderr, "%d ", arg1);
+#endif
 		}
 		if(op > 21) {
 			arg2 = *p++;
-/*			printf("%d ", arg2);*/ 
+#ifdef DEBUG
+			fprintf(stderr, "%d ", arg2);
+#endif
 		}
 		switch(op) {
 			case 1:
@@ -1046,7 +1085,7 @@ static void ExecuteLineCode(unsigned char *p)
 				if(GameVersion < 2)
 					Goto(Object[arg1]);
 				else
-					printf("Picture %d\n", arg1);
+					Message2(arg1);
 				break;
 			case 13:
 				Flag[arg1] = 255;
@@ -1114,13 +1153,13 @@ static void ExecuteLineCode(unsigned char *p)
 				putchar('\007');
 				fflush(stdout);
 				break;
-			case 33:
+			case 32:
 				RamSave(1);
 				break;
-			case 34:
+			case 33:
 				RamLoad();
 				break;
-			case 36:
+			case 35:
 				Oops();
 				break;
 			default:
@@ -1130,7 +1169,9 @@ static void ExecuteLineCode(unsigned char *p)
 		}
 	}
 	while(1);
-/*	printf("\n"); */
+#ifdef DEBUG
+	fprintf(stderr, "\n");
+#endif
 }
 
 static unsigned char *NextLine(unsigned char *p)
@@ -1209,8 +1250,10 @@ static void RunCommandTable(void)
 	while(*p != 0x7F) {
 		if((*p == 126 || *p == Word[0]) &&
 		   (p[1] == 126 || p[1] == Word[1])) {
-/*		   	PrintWord(p[0]);
-		   	PrintWord(p[1]); */
+#ifdef DEBUG
+			PrintWord(p[0]);
+			PrintWord(p[1]);
+#endif
 			ExecuteLineCode(p + 2);
 			if(ActionsDone)
 				return;
@@ -1342,6 +1385,7 @@ static void FindTables(void)
 	FlagBase = FindFlags();
 	ObjLocBase = FindObjectLocations();
 	MessageBase = FindMessages();
+	Message2Base = FindMessages2();
 }
 
 /*
@@ -1439,9 +1483,11 @@ int main(int argc, char *argv[])
 	}
 
 	FindTables();
-#ifdef DEBUG	
+#ifdef DEBUG
+	if (GameVersion > 1)
+		Action[12] = "MESSAGE2";
 	LoadWordTable();
-#endif	
+#endif
 	NewGame();
 	NumLowObjects = GuessLowObjectEnd();
 	DisplayInit();
