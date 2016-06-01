@@ -689,7 +689,7 @@ void DumpMessages(void)
 void DumpMessages2(void)
 {
 	int i;
-	if (MaxMessage2 == 0)
+	if (Message2Base == 0 || MaxMessage2 == 0)
 		return;
 	printf("%d Messages2\n\n", MaxMessage2);
 	for (i = 0; i < MaxMessage2; i++) {
