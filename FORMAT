@@ -76,6 +76,50 @@ Exit data is in the form
 
 Verbs 1-10 are exits
 
+Pictures
+
+Each picture script is delimited by an 0xFF end marker. These scripts
+compose pictures out of block pictures which are themselves encoded in the
+same way as the earlier games. In fact the scripts of pictures first appear
+in Seas of Blood. Games prior to Robin of Sherwood use display sized
+pictures, Robin of Sherwood is special using strips for forest and special
+rules.
+
+Drawing Codes:
+
+0xFF		End
+0xFE		733C
+0xFD		6FF5 arg 0-7, arg 0-7
+0xFC		76D4 arg1 arg2 arg3 arg4
+		Seems to be
+		setattributes (arg1,arg2, height, attribute, width)
+		where arg1=y arg2=x in chars 0,0 top left
+0xFB		700D
+		Make picture attribute area bright
+0xFA		7512
+0xF9		DrawPicture n	(following byte)
+0xF8		729D
+0xF7		743A arg1 }
+0xF6		744E arg1 } set A to 0 4 or 8 and call same method
+0xF5		7444 arg1 }
+0xF4		7458 arg1
+	End of object arg1 is not present
+0xF3		7409
+0xF2		7331 arg1 arg2 arg3 arg4
+0xF1		73FE
+0xEE		7507
+0xED		7654
+0xEC		7649
+0xEB		CRASH
+0xEA		CRASH
+0xE9		7678 arg1 arg2 ..
+		arg1 = colour to match
+		arg2 = new colour
+		Swap colour (paper or ink)
+0xE8		747A
+		Clear upper
+
+Lower values 6FB7 = code calls 7234 etc see 6F86
 
 Engine Tables
 
@@ -124,7 +168,8 @@ Action Codes
 9	GET		O
 10	DROP		O
 11	GOTO		L
-12	GOBY		O	Something else in HEMAN ?
+12	GOBY		O	Secondary message block (He-man, Kayleth
+                                etc ?) on all games that use it ?
 13	SET		F
 14	CLEAR		F
 15	MESSAGE		M
@@ -144,11 +189,10 @@ Action Codes
 29	PUTWITH		O	O
 30	BEEP		?	?		(Rebel Planet)
 31	LOOK		?	?		(Unsure)
-32	Unknown - appears in Heman 0 0
-33	QSAVE		0	0		(He-man, Temple)
-34	QLOAD		0	0		(He-Man, Temple)
-35	Unknown
-36	OOPS					(Temple)
+32	QSAVE		0	0		(He-man, Temple, Kayleth)
+33	QLOAD		0	0		(He-Man, Temple, Kayleth)
+34	Clear Lower??	0	0		(Used in Kayleth)
+35	OOPS					(Temple)
 
 Each sequence consists of sequences of conditions and then actions
 each individual condition or action is followed by its parameters. A single 
@@ -198,7 +242,6 @@ Object Starts	B6A8
 Room ???	B798 (room graphics ?)
 		FF terminated F8 marker ?
 Room Text	1B000   (Segment 3)
-
 
 Note that blizzard pass is special in that it is the only game for the 
 Spectrum 128. The 128K version has two location tables (one for what would
