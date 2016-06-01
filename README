@@ -1,5 +1,5 @@
 
-	TaylorMade v0.3		(c) 2004 - 2016 Alan Cox
+	TaylorMade v0.4		(c) 2004 - 2016 Alan Cox
 				All Rights Reserved
 				See COPYING for more information
 
@@ -43,8 +43,6 @@ Working Games
 		Much like He-man in game features but also adds
 	an "oops" function to go back one move. The oops function 
 	is supported.
-
-Not Working
 
 	Kayleth
 		Pulls some tables wrongly from the .sna but close
