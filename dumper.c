@@ -813,4 +813,10 @@ int main(int argc, char *argv[])
 	DumpMessages();
 	DumpMessages2();
 	printf("Text End: %04X\n", TopText - Image + 0x4000);
+	if (GameVersion == 2)
+		printf("Working size needed: %04X\n", TopText - Image - ActionBase);
+	else if (GameVersion == 1)
+		printf("Working size needed: %04X (%04X - %04X)\n", ObjLocBase - RoomBase, ObjLocBase, RoomBase);
+	else
+		printf("Working size needed: %04X\n", TopText - Image - ExitBase);
 }
