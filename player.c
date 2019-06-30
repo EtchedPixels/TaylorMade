@@ -1081,7 +1081,7 @@ static void ExecuteLineCode(unsigned char *p)
 				break;
 			case 12:
 				/* Blizzard pass era */
-				if(GameVersion < 2)
+				if(GameVersion == 1)
 					Goto(Object[arg1]);
 				else
 					Message2(arg1);
@@ -1483,7 +1483,7 @@ int main(int argc, char *argv[])
 
 	FindTables();
 #ifdef DEBUG
-	if (GameVersion > 1)
+	if (GameVersion != 1)
 		Action[12] = "MESSAGE2";
 	LoadWordTable();
 #endif
