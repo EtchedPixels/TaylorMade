@@ -24,6 +24,7 @@ static unsigned int ObjLocBase;
 static unsigned int StatusBase;
 static unsigned int ActionBase;
 static unsigned int FlagBase;
+static unsigned char *TopText;
 
 static int NumLowObjects;
 static int MaxRoom;
@@ -299,6 +300,8 @@ static void PrintText1(unsigned char *p, int n)
 		PrintToken(*p++);
 	if(*p == 0x5E)
 		OutChar(' ');
+	if (p > TopText)
+		TopText = p;
 }
 
 /*
@@ -317,6 +320,8 @@ static void PrintText0(unsigned char *p, int n)
 			if(n == 0) {
 				if(c == 0x5E)
 					OutChar(' ');
+				if (p > TopText)
+					TopText = p;
 				return;
 			}
 			n--;
@@ -594,6 +599,7 @@ static int DumpExits(unsigned char v)
 		
 static void FindTables(void) 
 {
+	printf("Verbs at %04X\n", VerbBase + 0x4000);
 	TokenBase = FindTokens();
 	printf("Tokens at %04X\n", TokenBase + 0x4000);
 	RoomBase = FindRooms();
@@ -806,4 +812,5 @@ int main(int argc, char *argv[])
 	DumpRooms();
 	DumpMessages();
 	DumpMessages2();
+	printf("Text End: %04X\n", TopText - Image + 0x4000);
 }
