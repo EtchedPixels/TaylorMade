@@ -465,7 +465,6 @@ static void Message(unsigned char m)
 static void Message2(unsigned int m)
 {
 	unsigned char *p = Image + Message2Base;
-	printf("MESSAGE2 %d %d\n", Message2Base, m);
 	PrintText(p, m);
 }
 
