@@ -40,6 +40,7 @@ static int Redraw;
 
 static int GameVersion;
 static int Blizzard;
+static int Questprobe;
 
 #ifdef DEBUG
 
@@ -92,7 +93,7 @@ static char *Action[]={
 	"SAVE",
 	"DROPALL",
 	"LOOK",
-	"OK",		/* Guess */
+	"OK",			/* Guess */
 	"GET",
 	"DROP",
 	"GOTO",
@@ -109,21 +110,21 @@ static char *Action[]={
 	"LET",
 	"ADD",
 	"SUB",
-	"PUT",		/* ?? */
+	"PUT",			/* ?? */
 	"SWAP",
 	"SWAPF",
 	"MEANS",
 	"PUTWITH",
-	"BEEP",		/* Rebel Planet at least */
+	"BEEP",			/* Rebel Planet at least */
 	"REFRESH?",
 	"RAMSAVE",
 	"RAMLOAD",
-	"ACT34",
+	"CLSLOW?",
 	"OOPS",
-	"ACT36",
-	"ACT37",
-	"ACT38",
-	"ACT39",
+	"DIAGNOSE",
+	"SWITCHINVENTORY",
+	"SWITCH",
+	"DONE",
 	"ACT40",
 	"ACT41",
 	"ACT42",
@@ -153,19 +154,108 @@ static void LoadWordTable(void)
 static void PrintWord(unsigned char word)
 {
 	if(word == 126)
-		fprintf(stderr, "*    ");
+		fprintf(stderr, "*	  ");
 	else if(word == 0 || WordMap[word][0] == 0)
 		fprintf(stderr, "%-4d ", word);
 	else {
 		fprintf(stderr, "%c%c%c%c ",
-			WordMap[word][0],
-			WordMap[word][1],
-			WordMap[word][2],
-			WordMap[word][3]);
+				WordMap[word][0],
+				WordMap[word][1],
+				WordMap[word][2],
+				WordMap[word][3]);
 	}
 }
 
 #endif
+
+static int Q3Condition[] = {
+	0,
+	1,
+	2,
+	3,
+	4,
+	5,
+	7,
+	9,
+	10,
+	13,
+	14,
+	15,
+	16,
+	17,
+	18,
+	20,
+	21,
+	22,
+	23,
+	25,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+};
+
+static int Q3Action[]={
+	0,
+	37, // swap TORCH <-> THING
+	36, // report status
+	1,
+	2,
+	3,
+	4,
+	5,
+	39, // set flag 118 to 1?
+	9,
+	10,
+	11,
+	38, // swap TORCH <-> THING
+	13,
+	14,
+	15,
+	16,
+	17,
+	22,
+	23,
+	24,
+	25,
+	26,
+	31, // Redraw room image
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0
+};
 
 static int FindCode(char *x, int base)
 {
@@ -179,40 +269,59 @@ static int FindCode(char *x, int base)
 	return -1;
 }
 
-static int FindFlags(void) 
+static int FindFlags(void)
 {
-	/* Look for the flag initial block copy */
-	int pos = FindCode("\x01\x06\x00\xED\xB0\xC9\x00\xFD", 0);
+	int pos = FindCode("\xE7\x97\x51\x95\x5B\x7E\x5D\x7E\x76\x93", 0);
 	if(pos == -1) {
-		fprintf(stderr, "Cannot find initial flag data.\n");
-		exit(1);
+		/* Look for the flag initial block copy */
+		int pos = FindCode("\x01\x06\x00\xED\xB0\xC9\x00\xFD", 0);
+		if(pos == -1) {
+			fprintf(stderr, "Cannot find initial flag data.\n");
+			exit(1);
+		} else return pos + 6;
 	}
-	return pos + 6;
+	return pos + 12;
 }
 
 static int FindObjectLocations(void)
 {
-	int pos = FindCode("\x01\x06\x00\xED\xB0\xC9\x00\xFD", 0);
+	/* Questprobe */
+	int pos = FindCode("\xF8\x10\x20\x40\xF8\xF8\xFC\xFC\xFC\x01\x05\xFC\x06\xFC\x0B\x18", 0);
+
 	if(pos == -1) {
-		fprintf(stderr, "Cannot find initial object data.\n");
-		exit(1);
+		pos = FindCode("\x01\x06\x00\xED\xB0\xC9\x00\xFD", 0);
+		if(pos == -1) {
+			fprintf(stderr, "Cannot find initial object data.\n");
+			exit(1);
+		}
+		pos = Image[pos - 16] + (Image[pos - 15] << 8);
+		return pos - 0x4000;
 	}
-	pos = Image[pos - 16] + (Image[pos - 15] << 8);
-	return pos - 0x4000;
+
+	return pos + 6;
 }
 
-static int FindExits(void) 
+static int FindExits(void)
 {
 	int pos = 0;
-	
+
 	while((pos = FindCode("\x1A\xBE\x28\x0B\x13", pos+1)) != -1)
 	{
 		pos = Image[pos - 5] + (Image[pos - 4] << 8);
 		pos -= 0x4000;
 		return pos;
 	}
-	fprintf(stderr, "Cannot find initial flag data.\n");
-	exit(1);
+
+	/* Questprobe */
+	pos = FindCode("\x80\x81\x03\x05\x82\x83\x84\x02\x09\x03\x0E\x04\x0F", 0);
+
+	if(pos == -1) {
+		fprintf(stderr, "Cannot find initial exit data.\n");
+		exit(1);
+	} else {
+		return pos;
+	}
+
 }
 
 static int LooksLikeTokens(int pos)
@@ -250,13 +359,18 @@ static int FindTokens(void)
 	do {
 		pos = FindCode("\x47\xB7\x28\x0B\x2B\x23\xCB\x7E", pos + 1);
 		if(pos == -1) {
-			/* Last resort */
-			addr = FindCode("You are in ", 0) - 1;
-			if(addr == -1) {
-				fprintf(stderr, "Unable to find token table.\n");
-				exit(1);
-			}
-			return addr;
+			/* Questprobe */
+			pos = FindCode("\x58\x58\x58\x58\xFF", 0);
+			if(pos == -1) {
+				/* Last resort */
+				addr = FindCode("You are in ", 0) - 1;
+				if(addr == -1) {
+					fprintf(stderr, "Unable to find token table.\n");
+					exit(1);
+				}
+				return addr;
+			} else
+				return pos + 6;
 		}
 		addr = (Image[pos-1] <<8 | Image[pos-2]) - 0x4000;
 	}
@@ -328,7 +442,7 @@ static void OutReplace(char c)
 	LastChar = c;
 }
 
-static void OutKillSpace() 
+static void OutKillSpace()
 {
 	PendSpace = 0;
 }
@@ -342,9 +456,10 @@ static void OutString(char *p)
 static unsigned char *TokenText(unsigned char n)
 {
 	unsigned char *p = Image + TokenBase;
-			
-	p = Image + TokenBase;
-	
+
+	if (Questprobe)
+		n -= 0x7b;
+
 	while(n > 0) {
 		while((*p & 0x80) == 0)
 			p++;
@@ -353,6 +468,21 @@ static unsigned char *TokenText(unsigned char n)
 	}
 	return p;
 }
+
+//void QPrintChar(uint8_t c) { // Print character
+//	  if (c == 0x0d)
+//		  return;
+//	  if (Upper && c >= 'a') {
+//		  c -= 0x20; // token is made uppercase
+//	  }
+//	  OutChar(c);
+//	  if (c > '!') {
+//		  Upper = 0;
+//	  }
+//	  if (c == '!' || c == '?' || c == ':' || c == '.') {
+//		  Upper = 1;
+//	  }
+//}
 
 static void PrintToken(unsigned char n)
 {
@@ -379,9 +509,33 @@ static void PrintText1(unsigned char *p, int n)
 }
 
 /*
- *	Version 0 is different
+ *	  The Questprobe 3 version is different
  */
- 
+
+static void PrintTextQ(unsigned char *p, int n)
+{
+	while (n > 0) {
+		while (*p != 0x1f && *p != 0x18) {
+			p++;
+		}
+		n--;
+		p++;
+	}
+	do	{
+		if (*p == 0x18)
+			return;
+		if (*p >= 0x7b) // if c is >= 0x7b it is a token
+			PrintToken(*p);
+		else {
+			OutChar(*p);
+		}
+	} while (*p++ != 0x1f);
+}
+
+/*
+ *	  Version 0 is different
+ */
+
 static void PrintText0(unsigned char *p, int n)
 {
 	unsigned char *t = NULL;
@@ -407,8 +561,10 @@ static void PrintText0(unsigned char *p, int n)
 
 static void PrintText(unsigned char *p, int n)
 {
-	if(GameVersion == 0) 	/* In stream end markers */
+	if(GameVersion == 0)	 /* In stream end markers */
 		PrintText0(p, n);
+	else if (Questprobe)
+		PrintTextQ(p, n);
 	else			/* Out of stream end markers (faster) */
 		PrintText1(p, n);
 }
@@ -438,8 +594,16 @@ static int FindMessages(void)
 		GameVersion = 0;
 		return (Image[pos+9] + (Image[pos+10] << 8)) - 0x4000;
 	}
-	fprintf(stderr, "Unable to locate messages.\n");
-	exit(1);
+
+	/* Questprobe */
+	pos = FindCode("\x7F\xF8\x64\x86\xDB\x94\x20\xAD\xD2\x2E\x1F\x66\xE5", 0);
+
+	if(pos == -1) {
+		fprintf(stderr, "Unable to locate messages.\n");
+		exit(1);
+	}
+	Questprobe = 1;
+	return pos;
 }
 
 static int FindMessages2(void)
@@ -468,6 +632,19 @@ static void Message2(unsigned int m)
 	PrintText(p, m);
 }
 
+static void SysMessage(unsigned char m)
+{
+	if (!Questprobe) {
+		Message(m);
+		return;
+	}
+	if (m == EXITS)
+		m = 217;
+	else
+		m = 210 + m;
+	Message(m);
+}
+
 static int FindObjects(void)
 {
 	int pos = 0;
@@ -478,13 +655,21 @@ static int FindObjects(void)
 			continue;
 		return (Image[pos+8] + (Image[pos+9] << 8)) - 0x4000;
 	}
-	fprintf(stderr, "Unable to locate objects.\n");
-	exit(1);
+
+	/* Questprobe */
+	pos = FindCode("\x20\xFB\x62\x88\xF4\xAC\xBF\x73\x2C\x18\x20\xFF", 0);
+	if(pos == -1) {
+		fprintf(stderr, "Unable to locate objects.\n");
+		exit(1);
+	}
+	return pos;
 }
 
 static void PrintObject(unsigned char obj)
 {
 	unsigned char *p = Image + ObjectBase;
+	if (Questprobe)
+		p--;
 	PrintText(p, obj);
 }
 
@@ -499,8 +684,13 @@ static int FindRooms(void)
 			continue;
 		return (Image[pos+9] + (Image[pos+10] << 8)) - 0x4000;
 	}
-	fprintf(stderr, "Unable to locate rooms.\n");
-	exit(1);
+
+	pos = FindCode("QUESTPROBE 3: FANTASTIC FOUR", 0);
+	if(pos == -1) {
+		fprintf(stderr, "Unable to locate rooms.\n");
+		exit(1);
+	}
+	return pos ;
 }
 
 
@@ -535,6 +725,8 @@ static unsigned char Carried()
 
 static unsigned char Worn()
 {
+	if (Questprobe)
+		return 0;
 	return Flag[3];
 }
 
@@ -545,16 +737,33 @@ static unsigned char Location()
 
 static unsigned char NumObjects()
 {
+	if (Questprobe)
+		return 49;
+
 	return Flag[6];
+}
+
+static unsigned char MaxCarry()
+{
+	if (Questprobe)
+		return 255;
+	return Flag[4];
 }
 
 static int CarryItem(void)
 {
-	if(Flag[5] == Flag[4])
+	if(Flag[5] == MaxCarry())
 		return 0;
 	if(Flag[5] < 255)
 		Flag[5]++;
 	return 1;
+}
+
+static int Dark(void)
+{
+	if (Questprobe)
+		return Flag[43];
+	return Flag[1];
 }
 
 static void DropItem(void)
@@ -574,7 +783,7 @@ static void Put(unsigned char obj, unsigned char loc)
 static int Present(unsigned char obj)
 {
 	unsigned char v = Object[obj];
-	if(v == Location() || v == Worn() || v == Carried())
+	if(v == Location() || v == Worn() || v == Carried() || (Questprobe && v == Flag[3] && Flag[1] == Location()))
 		return 1;
 	return 0;
 }
@@ -605,7 +814,7 @@ void RamLoad(void)
 
 static void RamSave(int game)
 {
-	memcpy(RamFlag,  Flag, 128);
+	memcpy(RamFlag,	 Flag, 128);
 	memcpy(RamObject, Object, 256);
 	if(game)
 		Message(19);
@@ -624,40 +833,40 @@ static void Checkpoint(void)
 }
 
 
-static void LoadGame(void)
+static int LoadGame(void)
 {
 	char c;
 	char name[32];
 	FILE *f;
 	OutCaps();
-	Message(26);
+	SysMessage(RESUME_A_SAVED_GAME);
 	OutFlush();
-	
+
 	do {
 		c = WaitCharacter();
 		if(c == 'n' || c == 'N') {
 			OutChar('N');
 			OutChar('\n');
-			return;
+			return 0;
 		}
 		if(c == 'y' || c == 'Y') {
 			OutChar('Y');
 			OutChar('\n');
-		
+
 			OutString("File name: ");
-			LineInput(name, 32);	
-			
+			LineInput(name, 32);
+
 			f = fopen(name, "r");
 			if(f == NULL)
 				OutString("Unable to open file.\n");
 			else if(fread(Flag, 128, 1, f) != 1 ||
-			   fread(Object, 256, 1, f) != 1) {
+					fread(Object, 256, 1, f) != 1) {
 				OutString("Unable to load game.\n");
 				NewGame();
 			}
 			fclose(f);
 			Redraw = 1;
-			return;
+			return 1;
 		}
 	}
 	while(1);
@@ -667,7 +876,7 @@ static void QuitGame(void)
 {
 	char c;
 	OutCaps();
-	Message(18);
+	SysMessage(PLAY_AGAIN);
 	OutChar(' ');
 	OutFlush();
 	do {
@@ -692,20 +901,23 @@ static void Inventory(void)
 	int i;
 	int f = 0;
 	OutCaps();
-	Message(16);	/* ".. are carrying: " */
+	SysMessage(INVENTORY);
 	for(i = 0; i < NumObjects(); i++) {
 		if(Object[i] == Carried() || Object[i] == Worn()) {
 			f = 1;
 			PrintObject(i);
 			if(Object[i] == Worn())
-				Message(30);
+				SysMessage(WORN);
 		}
 	}
 	if(f == 0)
-		Message(17); /* "nothing at all" */
+		SysMessage(NOTHING);
 	else {
 		if(GameVersion == 0) {
 			OutKillSpace();
+			OutChar('.');
+		} else if (Questprobe) {
+			OutReplace(0);
 			OutChar('.');
 		} else {
 			OutReplace('.');
@@ -713,8 +925,8 @@ static void Inventory(void)
 	}
 }
 
-static void  AnyKey(void) {
-	Message(20);
+static void AnyKey(void) {
+	SysMessage(HIT_ENTER);
 	OutFlush();
 	WaitCharacter();
 }
@@ -731,7 +943,7 @@ static void SaveGame(void) {
 	}
 	if(fwrite(Flag, 128, 1, f) != 1 || fwrite(Object, 256,1 , f) != 1)
 		OutString("Save failed.\n");
-	fclose(f);	
+	fclose(f);
 }
 
 static void DropAll(void) {
@@ -745,15 +957,17 @@ static void DropAll(void) {
 
 static void GetObject(unsigned char obj) {
 	if(Object[obj] == Carried() || Object[obj] == Worn()) {
-		Message(21);
+		SysMessage(YOU_HAVE_IT);
 		return;
 	}
-	if(Object[obj] != Location()) {
-		Message(22);
-		return;
+	if (!(Questprobe && Flag[1] == Location() && Object[obj] == Flag[3])) {
+		if(Object[obj] != Location()) {
+			SysMessage(YOU_DONT_SEE_IT);
+			return;
+		}
 	}
 	if(CarryItem() == 0) {
-		Message(15);
+		SysMessage(YOURE_CARRYING_TOO_MUCH);
 		return;
 	}
 	Put(obj, Carried());
@@ -762,11 +976,11 @@ static void GetObject(unsigned char obj) {
 static void DropObject(unsigned char obj) {
 	/* FIXME: check if this is how the real game behaves */
 	if(Object[obj] == Worn()) {
-		Message(29);
+		SysMessage(YOU_ARE_WEARING_IT);
 		return;
 	}
 	if(Object[obj] != Carried()) {
-		Message(23);
+		SysMessage(YOU_HAVENT_GOT_IT);
 		return;
 	}
 	DropItem();
@@ -774,7 +988,7 @@ static void DropObject(unsigned char obj) {
 }
 
 static void Look(void) {
-	int i; 
+	int i;
 	int f = 0;
 	unsigned char locw = 0x80|Location();
 	unsigned char *p;
@@ -783,30 +997,38 @@ static void Look(void) {
 	OutReset();
 	OutCaps();
 	TopWindow();
-	
-	if(Flag[1]) {
-		Message(25);
+
+	if(Dark()) {
+		SysMessage(TOO_DARK_TO_SEE);
 		BottomWindow();
 		return;
 	}
 	PrintRoom(Location());
 	OutChar(' ');
 	for(i = 0; i < NumLowObjects; i++) {
-		if(Object[i] == Location())
+		if(Object[i] == Location()) {
+			if(Questprobe && f == 0) {
+				SysMessage(YOU_SEE);
+				f = 1;
+			}
 			PrintObject(i);
+		}
 	}
-	
+
+	f = 0;
 	p = Image + ExitBase;
-	
+
 	while(*p != locw)
 		p++;
 	p++;
 	while(*p < 0x80) {
-		if(f == 0)
-			Message(13);
+		if(f == 0) {
+			OutCaps();
+			SysMessage(EXITS);
+		}
 		f = 1;
 		OutCaps();
-		Message(*p);
+		SysMessage(*p);
 		p += 2;
 	}
 	if(f == 1)
@@ -815,7 +1037,7 @@ static void Look(void) {
 		OutChar('\n');
 	}
 	f = 0;
-	
+
 	for(; i < NumObjects(); i++) {
 		if(Object[i] == Location()) {
 			if(f == 0) {
@@ -832,8 +1054,8 @@ static void Look(void) {
 	OutChar('\n');
 	BottomWindow();
 }
-	
-	
+
+
 static void Goto(unsigned char loc) {
 	Flag[0] = loc;
 	Redraw = 1;
@@ -845,11 +1067,11 @@ static void Delay(unsigned char n) {
 
 static void Wear(unsigned char obj) {
 	if(Object[obj] == Worn()) {
-		Message(29);
+		SysMessage(YOU_ARE_WEARING_IT);
 		return;
 	}
 	if(Object[obj] != Carried()) {
-		Message(23);
+		SysMessage(YOU_HAVENT_GOT_IT);
 		return;
 	}
 	DropItem();
@@ -858,11 +1080,11 @@ static void Wear(unsigned char obj) {
 
 static void Remove(unsigned char obj) {
 	if(Object[obj] != Worn()) {
-		Message(28);
+		SysMessage(YOU_ARE_NOT_WEARING_IT);
 		return;
 	}
 	if(CarryItem() == 0) {
-		Message(15);
+		SysMessage(YOURE_CARRYING_TOO_MUCH);
 		return;
 	}
 	Put(obj, Carried());
@@ -872,34 +1094,115 @@ static void Means(unsigned char vb, unsigned char no) {
 	Word[0] = vb;
 	Word[1] = no;
 }
-		
+
+static void UpdateQ3Flags1(void) {
+	if (Flag[31] != 0) { /* I'm Thing */
+		if (Object[2] != 0xfc) { // Torch by the hands
+			Flag[1] = Location();
+		} else {
+			Flag[1] = Object[18]; // Location of Torch
+		}
+	} else { /* I'm The Human Torch */
+		if (Object[1] == 0xfc) { // Thing by the hands
+			Flag[1] = Object[17]; // Location of Thing
+		} else {
+			Flag[1] = Location();
+		}
+	}
+}
+
+static void UpdateQ3Flags2(void) {
+	if (Flag[52] != 0) {
+		UpdateQ3Flags1();
+		return;
+	}
+	Flag[26]++; // Turns played % 100
+	if (Flag[26] == 100) {
+		Flag[27]++; // Turns / 100
+		Flag[26] = 0;
+	}
+	Flag[47]++;
+	if (Flag[47] == 0)
+		Flag[47] = 0xff;
+	Flag[48]++;
+	if (Flag[48] == 0)
+		Flag[48] = 0xff;
+	UpdateQ3Flags1();
+}
+
+/* Questprobe 3 numbers the flags differently, so we have to offset them by 4 */
+static void AdjustQuestprobeConditions(unsigned char op, unsigned char *arg1)
+{
+	switch (op) {
+		case 15:
+		case 16:
+		case 21:
+		case 22:
+		case 23:
+		case 24:
+			*arg1 += 4;
+			break;
+		default:
+			break;
+	}
+}
+
+static void AdjustQuestprobeCommands(unsigned char op, unsigned char *arg1, unsigned char *arg2)
+{
+	switch (op) {
+		case 13:
+		case 14:
+		case 22:
+		case 23:
+		case 24:
+			*arg1 += 4;
+			break;
+		case 27:
+			*arg1 += 4;
+			*arg2 += 4;
+			break;
+		default:
+			break;
+	}
+}
+
+
 static void ExecuteLineCode(unsigned char *p)
 {
-	unsigned char arg1, arg2;
+	unsigned char arg1 = 0, arg2 = 0;
 	int n;
 	do {
 		unsigned char op = *p;
-		
+
 		if(op & 0x80)
 			break;
 		p++;
 		arg1 = *p++;
 #ifdef DEBUG
-		fprintf(stderr, "%s %d ", Condition[op], arg1);
+		if (Questprobe)
+			fprintf(stderr, "%s %d ", Condition[Q3Condition[op]], arg1);
+		else
+			fprintf(stderr, "%s %d ", Condition[op], arg1);
 #endif
-		if(op > 20)
+		if((Questprobe && op > 15) || (!Questprobe && op > 20))
 		{
 			arg2 = *p++;
 #ifdef DEBUG
 			fprintf(stderr, "%d ", arg2);
 #endif
 		}
+
+		if (Questprobe) {
+			op = Q3Condition[op];
+			AdjustQuestprobeConditions(op, &arg1);
+		}
+
 		switch(op) {
 			case 1:
 				if(Location() == arg1)
 					continue;
 				break;
-				
+
 			case 2:
 				if(Location() != arg1)
 					continue;
@@ -930,16 +1233,12 @@ static void ExecuteLineCode(unsigned char *p)
 				break;
 			case 9:
 				/*FIXME : or worn ?? */
-				if(Object[arg1] == Carried())
-					continue;
-				if(Object[arg1] == Worn())
+				if(Object[arg1] == Carried() || Object[arg1] == Worn())
 					continue;
 				break;
 			case 10:
 				/*FIXME : or worn ?? */
-				if(Object[arg1] != Carried())
-					continue;
-				if(Object[arg1] != Worn())
+				if(Object[arg1] != Carried() && Object[arg1] != Worn())
 					continue;
 				break;
 			case 11:
@@ -1004,7 +1303,7 @@ static void ExecuteLineCode(unsigned char *p)
 				break;
 			default:
 				fprintf(stderr, "Unknown condition %d.\n",
-					op);
+						op);
 				break;
 		}
 #ifdef DEBUG
@@ -1012,9 +1311,9 @@ static void ExecuteLineCode(unsigned char *p)
 #endif
 		return;
 	} while(1);
-	
+
 	ActionsExecuted = 1;
-	
+
 	do {
 		unsigned char op = *p;
 		if(!(op & 0x80))
@@ -1023,30 +1322,40 @@ static void ExecuteLineCode(unsigned char *p)
 #ifdef DEBUG
 		if(op & 0x40)
 			fprintf(stderr, "DONE:");
-		fprintf(stderr,"%s(%d) ", Action[op & 0x3F], op & 0x3F);
+		if (Questprobe)
+			fprintf(stderr,"%s(%d) ", Action[Q3Action[op & 0x3F]], op & 0x3F);
+		else
+			fprintf(stderr,"%s(%d) ", Action[op & 0x3F], op & 0x3F);
 #endif
-		
+
 		p++;
 		if(op & 0x40)
 			ActionsDone = 1;
 		op &= 0x3F;
 
-		
+
 		if(op > 8) {
 			arg1 = *p++;
 #ifdef DEBUG
 			fprintf(stderr, "%d ", arg1);
 #endif
 		}
-		if(op > 21) {
+		if((Questprobe && op > 17) || (!Questprobe && op > 21)) {
 			arg2 = *p++;
 #ifdef DEBUG
 			fprintf(stderr, "%d ", arg2);
 #endif
 		}
+
+		if (Questprobe) {
+			op = Q3Action[op];
+			AdjustQuestprobeCommands(op, &arg1, &arg2);
+		}
+
 		switch(op) {
 			case 1:
-				LoadGame();
+				if (LoadGame())
+					return;
 				break;
 			case 2:
 				QuitGame();
@@ -1068,7 +1377,7 @@ static void ExecuteLineCode(unsigned char *p)
 				break;
 			case 8:
 				/* Guess */
-				Message(8);
+				SysMessage(OKAY);
 				break;
 			case 9:
 				GetObject(arg1);
@@ -1089,415 +1398,481 @@ static void ExecuteLineCode(unsigned char *p)
 			case 13:
 				Flag[arg1] = 255;
 				break;
-			case 14:
-				Flag[arg1] = 0;
+	        case 14:
+                Flag[arg1] = 0;
+                break;
+            case 15:
+                Message(arg1);
+                break;
+            case 16:
+                Put(arg1, Location());
+                break;
+            case 17:
+                Put(arg1, Destroyed());
+                break;
+            case 18:
+                PrintNumber(Flag[arg1]);
+                break;
+            case 19:
+                Delay(arg1);
+                break;
+            case 20:
+                Wear(arg1);
+                break;
+            case 21:
+                Remove(arg1);
+                break;
+            case 22:
+                Flag[arg1] = arg2;
+                break;
+            case 23:
+                n = Flag[arg1] + arg2;
+                if(n > 255)
+                    n = 255;
+                Flag[arg1] = n;
+                break;
+            case 24:
+                n = Flag[arg1] - arg2;
+                if(n < 0)
+                    n = 0;
+                Flag[arg1] = n;
+                break;
+            case 25:
+                Put(arg1, arg2);
+                break;
+            case 26:
+                n = Object[arg1];
+                Put(arg1, Object[arg2]);
+                Put(arg2, n);
+                break;
+            case 27:
+                n = Flag[arg1];
+                Flag[arg1] = Flag[arg2];
+                Flag[arg2] = n;
+                break;
+            case 28:
+                Means(arg1, arg2);
+                break;
+            case 29:
+                Put(arg1, Object[arg2]);
+                break;
+            case 30:
+                /* Beep */
+                putchar('\007');
+                fflush(stdout);
+                break;
+            case 31:
 				break;
-			case 15:
-				Message(arg1);
-				break;
-			case 16:
-				Put(arg1, Location());
-				break;
-			case 17:
-				Put(arg1, Destroyed());
-				break;
-			case 18:
-				PrintNumber(Flag[arg1]);
-				break;
-			case 19:
-				Delay(arg1);
-				break;
-			case 20:
-				Wear(arg1);
-				break;
-			case 21:
-				Remove(arg1);
-				break;
-			case 22:
-				Flag[arg1] = arg2;
-				break;
-			case 23:
-				n = Flag[arg1] + arg2;
-				if(n > 255)
-					n = 255;
-				Flag[arg1] = n;
-				break;
-			case 24:
-				n = Flag[arg1] - arg2;
-				if(n < 0)
-					n = 0;
-				Flag[arg1] = n;
-				break;
-			case 25:
-				Put(arg1, arg2);
-				break;
-			case 26:
-				n = Object[arg1];
-				Put(arg1, Object[arg2]);
-				Put(arg2, n);
-				break;
-			case 27:
-				n = Flag[arg1];
-				Flag[arg1] = Flag[arg2];
-				Flag[arg2] = n;
-				break;
-			case 28:
-				Means(arg1, arg2);
-				break;
-			case 29:
-				Put(arg1, Object[arg2]);
-				break;
-			case 30:
-				/* Beep */
-				putchar('\007');
-				fflush(stdout);
-				break;
-			case 32:
-				RamSave(1);
-				break;
-			case 33:
-				RamLoad();
-				break;
-			case 35:
-				Oops();
-				break;
-			default:
-				fprintf(stderr, "Unknown command %d.\n",
-					op);
-				break;
-		}
-	}
-	while(1);
+            case 32:
+                RamSave(1);
+                break;
+            case 33:
+                RamLoad();
+                break;
+            case 34:
+                break;
+            case 35:
+                Oops();
+                break;
+            case 36: // DIAGNOSE
+                Message(223);
+                char buf[5];
+                char *p = buf;
+                snprintf(buf, 5, "%04d", Flag[26] + Flag[27] * 100);
+                while(*p)
+                    OutChar(*p++);
+                SysMessage(14);
+                if (Flag[31])
+                    OutString("100");
+                else {
+                    p = buf;
+                    snprintf(buf, 4, "%d", (Flag[7] >> 2) + Flag[7]);
+                    while(*p)
+                        OutChar(*p++);
+                }
+                SysMessage(15);
+                break;
+            case 37: // SWITCHINVENTORY
+            {
+                uint8_t temp = Flag[2];
+                Flag[2] = Flag[3];
+                Flag[3] = temp;
+                temp = Flag[42];
+                Flag[42] = Flag[43];
+                Flag[43] = temp;
+                Redraw = 1;
+                break;
+            }
+            case 38: // SWITCHCHARACTER
+                Flag[0] = Object[arg1];
+                GetObject(arg1);
+                break;
+            case 39: // DONE
+                ActionsDone = 0;
+                break;
+            default:
+                fprintf(stderr, "Unknown command %d.\n", op);
+                break;
+        }
+    }
+    while(1);
 #ifdef DEBUG
-	fprintf(stderr, "\n");
+    fprintf(stderr, "\n");
 #endif
 }
 
 static unsigned char *NextLine(unsigned char *p)
 {
-	unsigned char op;
-	while(!((op = *p) & 0x80)) {
-		p+=2;
-		if(op > 20)
-			p++;
-	}
-	while(((op = *p) & 0x80)) {
-		op &= 0x3F;
-		p++;
-		if(op > 8)
-			p++;
-		if(op > 21)
-			p++;
-	}
-	return p;
+    unsigned char op;
+    while(!((op = *p) & 0x80)) {
+        p+=2;
+        if((Questprobe && op > 15) || (!Questprobe && op > 20))
+            p++;
+    }
+    while(((op = *p) & 0x80)) {
+        op &= 0x3F;
+        p++;
+        if(op > 8)
+            p++;
+        if((Questprobe && op > 17) || (!Questprobe && op > 21))
+            p++;
+    }
+    return p;
 }
 
 static int FindStatusTable(void)
 {
-	int pos = 0;
-	while((pos = FindCode("\x3E\xFF\x32", pos+1)) != -1) {
-		if(Image[pos + 5] != 0x18)
-			continue;
-		if(Image[pos + 6] != 0x07)
-			continue;
-		if(Image[pos + 7] != 0x21)
-			continue;
-		return (Image[pos-2] + (Image[pos-1] << 8)) - 0x4000;
-	}
-	fprintf(stderr, "Unable to find automatics.\n");
-	exit(1);
+    int pos = 0;
+    while((pos = FindCode("\x3E\xFF\x32", pos+1)) != -1) {
+        if(Image[pos + 5] != 0x18)
+            continue;
+        if(Image[pos + 6] != 0x07)
+            continue;
+        if(Image[pos + 7] != 0x21)
+            continue;
+        return (Image[pos-2] + (Image[pos-1] << 8)) - 0x4000;
+    }
+
+    /* Questprobe */
+    pos = FindCode("\x7E\x7E\x01\x02\x0C\x30\x0B\x17\x10\x16\x07\x05", 0);
+    if (pos == -1) {
+        fprintf(stderr, "Unable to find automatics.\n");
+        exit(1);
+    }
+    return pos;
 }
 
-static void RunStatusTable(void) 
+static void RunStatusTable(void)
 {
-	unsigned char *p = Image + StatusBase;
-	
-	ActionsDone = 0;
-	ActionsExecuted = 0;
-	
-	while(*p != 0x7F) {
-		ExecuteLineCode(p);
-		if(ActionsDone)
-			return;
-		p = NextLine(p);
-	}
+    unsigned char *p = Image + StatusBase;
+
+    ActionsDone = 0;
+    ActionsExecuted = 0;
+
+    if (Questprobe)
+        UpdateQ3Flags2();
+
+    while(*p != 0x7F) {
+        while (Questprobe && *p == 0x7e) {
+            p++;
+        }
+        ExecuteLineCode(p);
+        if(ActionsDone)
+            return;
+        p = NextLine(p);
+    }
 }
 
 int FindCommandTable(void)
 {
-	int pos = 0;
-	while((pos = FindCode("\x3E\xFF\x32", pos+1)) != -1) {
-		if(Image[pos + 5] != 0x18)
-			continue;
-		if(Image[pos + 6] != 0x07)
-			continue;
-		if(Image[pos + 7] != 0x21)
-			continue;
-		return (Image[pos+8] + (Image[pos+9] << 8)) - 0x4000;
-	}
-	fprintf(stderr, "Unable to find commands.\n");
-	exit(1);
+    int pos = 0;
+    while((pos = FindCode("\x3E\xFF\x32", pos+1)) != -1) {
+        if(Image[pos + 5] != 0x18)
+            continue;
+        if(Image[pos + 6] != 0x07)
+            continue;
+        if(Image[pos + 7] != 0x21)
+            continue;
+        return (Image[pos+8] + (Image[pos+9] << 8)) - 0x4000;
+    }
+
+    pos = FindCode("\x19\x10\x01\x06\x8B\x02\x8E\x1B\x91\x12\xD0\x11", 0);
+
+    if (pos == -1) {
+        fprintf(stderr, "Unable to find commands.\n");
+        exit(1);
+    }
+    return pos;
 }
 
 static void RunCommandTable(void)
 {
-	unsigned char *p = Image + ActionBase;
+    unsigned char *p = Image + ActionBase;
 
-	ActionsDone = 0;
-	ActionsExecuted = 0;
-	
-	while(*p != 0x7F) {
-		if((*p == 126 || *p == Word[0]) &&
-		   (p[1] == 126 || p[1] == Word[1])) {
+    ActionsDone = 0;
+    ActionsExecuted = 0;
+
+    while(*p != 0x7F) {
+        if((*p == 126 || *p == Word[0]) &&
+           (p[1] == 126 || p[1] == Word[1])) {
 #ifdef DEBUG
-			PrintWord(p[0]);
-			PrintWord(p[1]);
+            PrintWord(p[0]);
+            PrintWord(p[1]);
 #endif
-			ExecuteLineCode(p + 2);
-			if(ActionsDone)
-				return;
-		}
-		p = NextLine(p + 2);
-	}
+            ExecuteLineCode(p + 2);
+            if(ActionsDone)
+                return;
+        }
+        p = NextLine(p + 2);
+    }
 }
 
 static int AutoExit(unsigned char v)
 {
-	unsigned char *p = Image + ExitBase;
-	unsigned char want = Location() | 0x80;
-	while(*p != want) {
-		if(*p == 0xFE)
-			return 0;
-		p++;
-	}
-	p++;
-	while(*p < 0x80) {
-		if(*p == v) {
-			Goto(p[1]);
-			return 1;
-		}
-		p+=2;
-	}
-	return 0;
+    unsigned char *p = Image + ExitBase;
+    unsigned char want = Location() | 0x80;
+    while(*p != want) {
+        if(*p == 0xFE)
+            return 0;
+        p++;
+    }
+    p++;
+    while(*p < 0x80) {
+        if(*p == v) {
+            Goto(p[1]);
+            return 1;
+        }
+        p+=2;
+    }
+    return 0;
 }
-		
-static void RunOneInput(void) 
+
+static void RunOneInput(void)
 {
-	if(Word[0] == 0 && Word[1] == 0) {
-		OutCaps();
-		Message(11);
-		return;
-	}
-	if(Word[0] < 11) {
-		if(AutoExit(Word[0])) {
-			if(Redraw)
-				Look();
-			RunStatusTable();
-			return;
-		}
-	}
-	OutCaps();
-	RunCommandTable();
-	
-	if(ActionsExecuted == 0) {
-		if(Word[0] < 11)
-			Message(24);
-		else
-			Message(12);
-		return;
-	}
-	if(Redraw)
-		Look();
-	RunStatusTable();
-	if(Redraw)
-		Look();
+    if(Word[0] == 0 && Word[1] == 0) {
+        OutCaps();
+        SysMessage(I_DONT_UNDERSTAND);
+        return;
+    }
+    if(Word[0] < 11) {
+        if(AutoExit(Word[0])) {
+            if(Redraw)
+                Look();
+            RunStatusTable();
+            return;
+        }
+    }
+    OutCaps();
+    RunCommandTable();
+
+    if(ActionsExecuted == 0) {
+        if(Word[0] < 11)
+            SysMessage(YOU_CANT_GO_THAT_WAY);
+        else
+            SysMessage(THATS_BEYOND_MY_POWER);
+        return;
+    }
+    if(Redraw)
+        Look();
+    RunStatusTable();
+    if(Redraw)
+        Look();
 }
 
 static int ParseWord(char *p)
 {
-	char buf[5];
-	int len = strlen(p);
-	unsigned char *words = Image + VerbBase;
-	int i;
+    char buf[5];
+    int len = strlen(p);
+    unsigned char *words = Image + VerbBase;
+    int i;
 
-	if(len >= 4) {
-		memcpy(buf, p, 4);
-		buf[4] = 0;
-	} else {
-		memcpy(buf, p, len);
-		memset(buf + len, ' ', 4 - len);
-	}
-	for(i = 0; i < 4; i++) {
-		if(buf[i] == 0)
-			break;
-		if(islower(buf[i]))
-			buf[i] = toupper(buf[i]);
-	}
-	while(*words != 126) {
-		if(memcmp(words, buf, 4) == 0)
-			return words[4];
-		words+=5;
-	}
-	return 0;
+    if(len >= 4) {
+        memcpy(buf, p, 4);
+        buf[4] = 0;
+    } else {
+        memcpy(buf, p, len);
+        memset(buf + len, ' ', 4 - len);
+    }
+    for(i = 0; i < 4; i++) {
+        if(buf[i] == 0)
+            break;
+        if(islower(buf[i]))
+            buf[i] = toupper(buf[i]);
+    }
+    while(*words != 126) {
+        if(memcmp(words, buf, 4) == 0)
+            return words[4];
+        words+=5;
+    }
+    return 0;
 }
-	
-static void  SimpleParser(void) 
+
+static void  SimpleParser(void)
 {
-	int nw;
-	int i;
-	int wn = 0;
-	char wb[5][17];
-	char buf[256];
-			
-	OutChar('\n');
-	if(GameVersion > 0) {
-		OutCaps();
-		Message(14);
-	}
-	else
-		OutString("> ");
-	OutFlush();
-	do
-	{
-		LineInput(buf, 255);
-		nw = sscanf(buf, "%16s %16s %16s %16s %16s", wb[0], wb[1], wb[2], wb[3], wb[4]);
-	} while(nw == 0);		
-	
-	for(i = 0; i < nw ; i++)
-	{
-		Word[wn] = ParseWord(wb[i]);
-		if(Word[wn])
-			wn++;
-	}
-	for(i = wn; i < 5; i++)
-		Word[i] = 0;
+    int nw;
+    int i;
+    int wn = 0;
+    char wb[5][17];
+    char buf[256];
+
+    OutChar('\n');
+    OutFlush();
+    if(Questprobe) {
+        if (Location() != 6) {
+            if (Flag[31] == 0)
+                SysMessage(8);
+            else
+                SysMessage(9);
+        }
+        OutCaps();
+        SysMessage(10);
+    } else
+        OutString("> ");
+    OutFlush();
+    do
+    {
+        LineInput(buf, 255);
+        nw = sscanf(buf, "%16s %16s %16s %16s %16s", wb[0], wb[1], wb[2], wb[3], wb[4]);
+    } while(nw == 0);
+
+    for(i = 0; i < nw ; i++)
+    {
+        Word[wn] = ParseWord(wb[i]);
+        if(Word[wn])
+            wn++;
+    }
+    for(i = wn; i < 5; i++)
+        Word[i] = 0;
 }
-	
-static void FindTables(void) 
+
+static void FindTables(void)
 {
-	TokenBase = FindTokens();
-	RoomBase = FindRooms();
-	ObjectBase = FindObjects();
-	StatusBase = FindStatusTable();
-	ActionBase = FindCommandTable();
-	ExitBase = FindExits();
-	FlagBase = FindFlags();
-	ObjLocBase = FindObjectLocations();
-	MessageBase = FindMessages();
-	Message2Base = FindMessages2();
+    TokenBase = FindTokens();
+    RoomBase = FindRooms();
+    ObjectBase = FindObjects();
+    StatusBase = FindStatusTable();
+    ActionBase = FindCommandTable();
+    ExitBase = FindExits();
+    FlagBase = FindFlags();
+    ObjLocBase = FindObjectLocations();
+    MessageBase = FindMessages();
+    Message2Base = FindMessages2();
 }
 
 /*
- *	Version 0 is different
+ *    Version 0 is different
  */
- 
+
 static int GuessLowObjectEnd0(void)
 {
-	unsigned char *p = Image + ObjectBase;
-	unsigned char *t = NULL;
-	unsigned char c = 0, lc;
-	int n = 0;
-	
-	while(1) {
-		if(t == NULL)
-			t = TokenText(*p++);
-		lc = c;
-		c = *t & 0x7F;
-		if(c == 0x5E || c == 0x7E) {
-			if(lc == ',' && n > 20)
-				return n;
-			n++;
-		}
-		if(*t++ & 0x80)
-			t = NULL;
-	}
+    unsigned char *p = Image + ObjectBase;
+    unsigned char *t = NULL;
+    unsigned char c = 0, lc;
+    int n = 0;
+
+    while(1) {
+        if(t == NULL)
+            t = TokenText(*p++);
+        lc = c;
+        c = *t & 0x7F;
+        if(c == 0x5E || c == 0x7E) {
+            if(lc == ',' && n > 20)
+                return n;
+            n++;
+        }
+        if(*t++ & 0x80)
+            t = NULL;
+    }
 }
 
 
 static int GuessLowObjectEnd(void)
 {
-	unsigned char *p = Image + ObjectBase;
-	unsigned char *x;
-	int n = 0;
-	
-	/* Can't automatically guess in this case */
-	if (Blizzard)
-		return 69;
+    unsigned char *p = Image + ObjectBase;
+    unsigned char *x;
+    int n = 0;
 
-	if(GameVersion == 0)
-		return GuessLowObjectEnd0();
-		
-	while(n < NumObjects()) {
-		while(*p != 0x7E && *p != 0x5E) {
-			p++;
-		}
-		x = TokenText(p[-1]);
-		while(!(*x & 0x80)) {
-			x++;
-		}
-		if((*x & 0x7F) == ',')
-			return n;
-		n++;
-		p++;
-	}
-	fprintf(stderr, "Unable to guess the last description object.\n");
-	return 0;
+    /* Can't automatically guess in this case */
+    if (Blizzard)
+        return 69;
+
+    if (Questprobe)
+        return 49;
+
+    if(GameVersion == 0)
+        return GuessLowObjectEnd0();
+
+    while(n < NumObjects()) {
+        while(*p != 0x7E && *p != 0x5E) {
+            p++;
+        }
+        x = TokenText(p[-1]);
+        while(!(*x & 0x80)) {
+            x++;
+        }
+        if((*x & 0x7F) == ',')
+            return n;
+        n++;
+        p++;
+    }
+    fprintf(stderr, "Unable to guess the last description object.\n");
+    return 0;
 }
 
 int main(int argc, char *argv[])
 {
-	FILE *f;
-	
-	if(argv[1] == NULL)
-	{
-		fprintf(stderr, "%s: <file>.\n", argv[0]);
-		exit(1);
-	}
-	
-	f = fopen(argv[1], "r");
-	if(f == NULL)
-	{
-		perror(argv[1]);
-		exit(1);
-	}
-	fseek(f, 27L, 0);
-	ImageLen = fread(Image, 1, 131072, f);
-	fclose(f);
-	
-	/* Guess initially at He-man style */
-	GameVersion = 2;
-	/* Blizzard Pass */
-	if(ImageLen > 49152) {
-		GameVersion = 1;
-		Blizzard = 1;
-	}
-	/* The message analyser will look for version 0 games */
-	
-	printf("Loaded %d bytes.\n", ImageLen);
-	
-	VerbBase = FindCode("NORT\001N", 0);
-	if(VerbBase == -1) {
-		fprintf(stderr, "No verb table!\n");
-		exit(1);
-	}
+    FILE *f;
 
-	FindTables();
+    if(argv[1] == NULL)
+    {
+        fprintf(stderr, "%s: <file>.\n", argv[0]);
+        exit(1);
+    }
+
+    f = fopen(argv[1], "r");
+    if(f == NULL)
+    {
+        perror(argv[1]);
+        exit(1);
+    }
+    fseek(f, 27L, 0);
+    ImageLen = fread(Image, 1, 131072, f);
+    fclose(f);
+
+    /* Guess initially at He-man style */
+    GameVersion = 2;
+    /* Blizzard Pass */
+    if(ImageLen > 49152) {
+        GameVersion = 1;
+        Blizzard = 1;
+    }
+    /* The message analyser will look for version 0 games */
+
+    printf("Loaded %d bytes.\n", ImageLen);
+
+    VerbBase = FindCode("NORT\001N", 0);
+    if(VerbBase == -1) {
+        fprintf(stderr, "No verb table!\n");
+        exit(1);
+    }
+
+    FindTables();
 #ifdef DEBUG
-	if (GameVersion != 1)
-		Action[12] = "MESSAGE2";
-	LoadWordTable();
+    if (GameVersion != 1 && !Questprobe)
+        Action[12] = "MESSAGE2";
+    LoadWordTable();
 #endif
-	NewGame();
-	NumLowObjects = GuessLowObjectEnd();
-	DisplayInit();
-	RamSave(0);
-	Look();
-	RunStatusTable();
-	if(Redraw)
-		Look();
-	while(1) {
-		Checkpoint();
-		SimpleParser();
-		RunOneInput();
-	}
+    NewGame();
+    NumLowObjects = GuessLowObjectEnd();
+    DisplayInit();
+    RamSave(0);
+    Look();
+    RunStatusTable();
+    if(Redraw)
+        Look();
+    while(1) {
+        Checkpoint();
+        SimpleParser();
+        RunOneInput();
+    }
 }
