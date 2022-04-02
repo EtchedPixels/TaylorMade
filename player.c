@@ -124,7 +124,7 @@ static char *Action[]={
 	"DIAGNOSE",
 	"SWITCHINVENTORY",
 	"SWITCHCHARACTER",
-	"DONE",
+	"CONTINUE",
 	"IMAGE",
 	"ACT41",
 	"ACT42",
@@ -212,7 +212,7 @@ static int Q3Action[]={
 	SHOWINVENTORY,
 	ANYKEY,
 	SAVE,
-	DONE, // set flag 118 to 1?
+	CONTINUE, /* Set "condition failed" flag, Flag[118], to 1 */
 	GET,
 	DROP,
 	GOTO,
@@ -1494,7 +1494,7 @@ static void ExecuteLineCode(unsigned char *p)
 				Flag[0] = Object[arg1];
 				GetObject(arg1);
 				break;
-			case DONE: // DONE
+			case CONTINUE:
 				ActionsDone = 0;
 				break;
 			case IMAGE:
