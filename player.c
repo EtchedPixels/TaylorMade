@@ -271,6 +271,7 @@ static int FindCode(char *x, int base)
 
 static int FindFlags(void)
 {
+	/* Questprobe */
 	int pos = FindCode("\xE7\x97\x51\x95\x5B\x7E\x5D\x7E\x76\x93", 0);
 	if(pos == -1) {
 		/* Look for the flag initial block copy */
@@ -685,6 +686,7 @@ static int FindRooms(void)
 		return (Image[pos+9] + (Image[pos+10] << 8)) - 0x4000;
 	}
 
+	/* Questprobe */
 	pos = FindCode("QUESTPROBE 3: FANTASTIC FOUR", 0);
 	if(pos == -1) {
 		fprintf(stderr, "Unable to locate rooms.\n");
@@ -1596,6 +1598,7 @@ int FindCommandTable(void)
 		return (Image[pos+8] + (Image[pos+9] << 8)) - 0x4000;
 	}
 
+	/* Questprobe */
 	pos = FindCode("\x19\x10\x01\x06\x8B\x02\x8E\x1B\x91\x12\xD0\x11", 0);
 
 	if (pos == -1) {
