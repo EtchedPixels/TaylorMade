@@ -470,21 +470,6 @@ static unsigned char *TokenText(unsigned char n)
 	return p;
 }
 
-//void QPrintChar(uint8_t c) { // Print character
-//	  if (c == 0x0d)
-//		  return;
-//	  if (Upper && c >= 'a') {
-//		  c -= 0x20; // token is made uppercase
-//	  }
-//	  OutChar(c);
-//	  if (c > '!') {
-//		  Upper = 0;
-//	  }
-//	  if (c == '!' || c == '?' || c == ':' || c == '.') {
-//		  Upper = 1;
-//	  }
-//}
-
 static void PrintToken(unsigned char n)
 {
 	unsigned char *p = TokenText(n);
