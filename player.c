@@ -507,7 +507,7 @@ static void PrintTextQ(unsigned char *p, int n)
 		n--;
 		p++;
 	}
-	do	{
+	do {
 		if (*p == 0x18)
 			return;
 		if (*p >= 0x7b) // if c is >= 0x7b it is a token
@@ -1153,7 +1153,6 @@ static void AdjustQuestprobeCommands(unsigned char op, unsigned char *arg1, unsi
 	}
 }
 
-
 static void ExecuteLineCode(unsigned char *p)
 {
 	unsigned char arg1 = 0, arg2 = 0;
@@ -1695,7 +1694,7 @@ static int ParseWord(char *p)
 	return 0;
 }
 
-static void	 SimpleParser(void)
+static void SimpleParser(void)
 {
 	int nw;
 	int i;
