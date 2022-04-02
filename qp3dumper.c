@@ -9,7 +9,6 @@
 
 static unsigned char Flag[128];
 static unsigned char Object[256];
-static unsigned char Word[5];
 
 static unsigned char Image[131072];
 static size_t ImageLen;
@@ -291,34 +290,6 @@ static size_t FindExits(void)
 		exit(1);
 	}
 	return pos;
-}
-
-static int LooksLikeTokens(int pos)
-{
-	unsigned char *p = Image + pos;
-	int n = 0;
-	int t = 0;
-	while(n < 512) {
-		unsigned char c = p[n] & 0x7F;
-		if(c >= 'a' && c <= 'z')
-			t++;
-		n++;
-	}
-	if(t > 300)
-		return 1;
-	return 0;
-}
-
-static void TokenClassify(int pos)
-{
-	unsigned char *p = Image + pos;
-	int n = 0;
-	while(n++ < 256) {
-		do {
-			if(*p == 0x5E || *p == 0x7E)
-				GameVersion = 0;
-		} while(!(*p++ & 0x80));
-	}
 }
 
 static size_t FindTokens(void)
