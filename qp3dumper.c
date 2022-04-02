@@ -388,6 +388,8 @@ static void PrintText(unsigned char *p, int n)
 		if (*p >= 0x7b) // if c is >= 0x7b it is a token
 			PrintToken(*p);
 		else {
+			if (p > TopText)
+				TopText = p;
 			OutChar(*p);
 		}
 	} while (*p++ != 0x1f);
@@ -751,5 +753,5 @@ int main(int argc, char *argv[])
 	PrintConditionAddresses();
 	PrintActionAddresses();
 	printf("Text End: %04lX\n", TopText - Image + 0x4000);
-	printf("Working size needed: %04lX\n", TopText - Image - ExitBase);
+	printf("Working size needed: %04lX %04lX - %04lX)\n", ObjLocBase - RoomBase, ObjLocBase, RoomBase);
 }
