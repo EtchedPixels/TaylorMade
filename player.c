@@ -279,9 +279,9 @@ static int FindFlags(void)
 		if(pos == -1) {
 			fprintf(stderr, "Cannot find initial flag data.\n");
 			exit(1);
-		} else return pos + 6;
+		} else return pos + 5;
 	}
-	return pos + 12;
+	return pos + 11;
 }
 
 static int FindObjectLocations(void)
@@ -788,7 +788,8 @@ static void NewGame(void)
 {
 	Redraw = 1;
 	memset(Flag, 0, 128);
-	memcpy(Flag + 1, Image + FlagBase, 6);
+	memcpy(Flag, Image + FlagBase, 7);
+	Flag[0] = 0;
 	memcpy(Object, Image + ObjLocBase, NumObjects());
 }
 

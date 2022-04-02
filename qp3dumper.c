@@ -268,7 +268,7 @@ static size_t FindFlags(void)
 		fprintf(stderr, "Cannot find initial flag data.\n");
 		exit(1);
 	}
-	return pos + 12;
+	return pos + 11;
 }
 
 static size_t FindObjectLocations(void)
