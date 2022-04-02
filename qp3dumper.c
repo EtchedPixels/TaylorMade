@@ -74,26 +74,26 @@ static char *Condition[]={
 };
 
 static int Q3Condition[] = {
-	0,
-	1,
-	2,
-	3,
-	4,
-	5,
-	7,
-	9,
-	10,
-	13,
-	14,
-	15,
-	16,
-	17,
-	18,
-	20,
-	21,
-	22,
-	23,
-	25,
+	CONDITIONERROR,
+	AT,
+	NOTAT,
+	ATGT,
+	ATLT,
+	PRESENT,
+	ABSENT,
+	CARRIED,
+	NOTCARRIED,
+	NODESTROYED,
+	DESTROYED,
+	ZERO,
+	NOTZERO,
+	WORD1,
+	WORD2,
+	CHANCE,
+	LT,
+	GT,
+	EQ,
+	OBJECTAT,
 	0,
 	0,
 	0,
@@ -147,9 +147,9 @@ static char *Action[]={
 	"OOPS",
 	"DIAGNOSE",
 	"SWITCHINVENTORY",
-	"SWITCH",
-	"ACT39",
-	"ACT40",
+	"SWITCHCHARACTER",
+	"DONE",
+	"IMAGE",
 	"ACT41",
 	"ACT42",
 	"ACT43",
@@ -163,30 +163,30 @@ static char *Action[]={
 };
 
 static int Q3Action[]={
-	0,
-	37, // swap TORCH <-> THING
-	36, // report status
-	1,
-	2,
-	3,
-	4,
-	5,
-	8, // set flag 118 to 1?
-	9,
-	10,
-	11,
-	38, // swap TORCH <-> THING
-	13,
-	14,
-	15,
-	16,
-	17,
-	22,
-	23,
-	24,
-	25,
-	26,
-	31, // Redraw room image
+	ACTIONERROR,
+	SWITCHINVENTORY, // swap TORCH <-> THING
+	DIAGNOSE, // report status
+	LOADPROMPT,
+	QUIT,
+	SHOWINVENTORY,
+	ANYKEY,
+	SAVE,
+	DONE, // set flag 118 to 1?
+	GET,
+	DROP,
+	GOTO,
+	SWITCHCHARACTER, // swap TORCH <-> THING
+	SET,
+	CLEAR,
+	MESSAGE,
+	CREATE,
+	DESTROY,
+	LET,
+	ADD,
+	SUB,
+	PUT,
+	SWAP,
+	IMAGE, // Redraw room image
 	0,
 	0,
 	0,
@@ -395,7 +395,6 @@ static void PrintText(unsigned char *p, int n)
 
 static size_t FindMessages(void)
 {
-//	  size_t pos = FindCode("\x8A\xF1\x20\x49\x20\xF6\xAD\xD2\x18\x20\xC2\xD3\x68\x2C\x18\x20\x73\xCA\xDB\x2C", 0);
 	size_t pos = FindCode("\x7F\xF8\x64\x86\xDB\x94\x20\xAD\xD2\x2E\x1F\x66\xE5", 0);
 
 
@@ -456,7 +455,6 @@ static void NewGame(void)
 static void ExecuteLineCode(unsigned char *p)
 {
 	unsigned char arg1 = 0, arg2 = 0;
-	int n;
 	do {
 		unsigned char op = *p;
 
@@ -682,10 +680,8 @@ int main(int argc, char *argv[])
 
 	if(argv[1] == NULL)
 	{
-		argv[1] = "/Users/administrator/Desktop/human.sna";
-
-//		  fprintf(stderr, "%s: <file>.\n", argv[0]);
-//		  exit(1);
+		fprintf(stderr, "%s: <file>.\n", argv[0]);
+		exit(1);
 	}
 
 	f = fopen(argv[1], "r");
