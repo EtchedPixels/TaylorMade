@@ -1134,7 +1134,7 @@ static void AdjustQuestprobeConditions(unsigned char op, unsigned char *arg1)
 	}
 }
 
-static void AdjustQuestprobeCommands(unsigned char op, unsigned char *arg1, unsigned char *arg2)
+static void AdjustQuestprobeActions(unsigned char op, unsigned char *arg1, unsigned char *arg2)
 {
 	switch (op) {
 		case 13:
@@ -1335,7 +1335,7 @@ static void ExecuteLineCode(unsigned char *p)
 
 		if (Questprobe) {
 			op = Q3Action[op];
-			AdjustQuestprobeCommands(op, &arg1, &arg2);
+			AdjustQuestprobeActions(op, &arg1, &arg2);
 		}
 
 		switch(op) {
