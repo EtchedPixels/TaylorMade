@@ -123,7 +123,7 @@ static char *Action[]={
 	"OOPS",
 	"DIAGNOSE",
 	"SWITCHINVENTORY",
-	"SWITCH",
+	"SWITCHCHARACTER",
 	"DONE",
 	"ACT40",
 	"ACT41",
@@ -169,26 +169,26 @@ static void PrintWord(unsigned char word)
 #endif
 
 static int Q3Condition[] = {
-	0,
-	1,
-	2,
-	3,
-	4,
-	5,
-	7,
-	9,
-	10,
-	13,
-	14,
-	15,
-	16,
-	17,
-	18,
-	20,
-	21,
-	22,
-	23,
-	25,
+	CONDITIONERROR,
+	AT,
+	NOTAT,
+	ATGT,
+	ATLT,
+	PRESENT,
+	ABSENT,
+	CARRIED,
+	NOTCARRIED,
+	NODESTROYED,
+	DESTROYED,
+	ZERO,
+	NOTZERO,
+	WORD1,
+	WORD2,
+	CHANCE,
+	LT,
+	GT,
+	EQ,
+	OBJECTAT,
 	0,
 	0,
 	0,
@@ -204,30 +204,30 @@ static int Q3Condition[] = {
 };
 
 static int Q3Action[]={
-	0,
-	37, // swap TORCH <-> THING
-	36, // report status
-	1,
-	2,
-	3,
-	4,
-	5,
-	39, // set flag 118 to 1?
-	9,
-	10,
-	11,
-	38, // swap TORCH <-> THING
-	13,
-	14,
-	15,
-	16,
-	17,
-	22,
-	23,
-	24,
-	25,
-	26,
-	31, // Redraw room image
+	ACTIONERROR,
+	SWITCHINVENTORY, // swap TORCH <-> THING
+	DIAGNOSE, // report status
+	LOADPROMPT,
+	QUIT,
+	SHOWINVENTORY,
+	ANYKEY,
+	SAVE,
+	DONE, // set flag 118 to 1?
+	GET,
+	DROP,
+	GOTO,
+	SWITCHCHARACTER, // swap TORCH <-> THING
+	SET,
+	CLEAR,
+	MESSAGE,
+	CREATE,
+	DESTROY,
+	LET,
+	ADD,
+	SUB,
+	PUT,
+	SWAP,
+	REFRESH, // Redraw room image
 	0,
 	0,
 	0,
@@ -633,7 +633,7 @@ static void Message2(unsigned int m)
 	PrintText(p, m);
 }
 
-static void SysMessage(unsigned char m)
+static void SysMessage(SysMessageType m)
 {
 	if (!Questprobe) {
 		Message(m);
@@ -909,7 +909,7 @@ static void Inventory(void)
 			f = 1;
 			PrintObject(i);
 			if(Object[i] == Worn())
-				SysMessage(WORN);
+				SysMessage(NOWWORN);
 		}
 	}
 	if(f == 0)
@@ -1200,106 +1200,106 @@ static void ExecuteLineCode(unsigned char *p)
 		}
 
 		switch(op) {
-			case 1:
+			case AT:
 				if(Location() == arg1)
 					continue;
 				break;
 
-			case 2:
+			case NOTAT:
 				if(Location() != arg1)
 					continue;
 				break;
-			case 3:
+			case ATGT:
 				if(Location() > arg1)
 					continue;
 				break;
-			case 4:
+			case ATLT:
 				if(Location() < arg1)
 					continue;
 				break;
-			case 5:
+			case PRESENT:
 				if(Present(arg1))
 					continue;
 				break;
-			case 6:
+			case HERE:
 				if(Object[arg1] == Location())
 					continue;
 				break;
-			case 7:
+			case ABSENT:
 				if(!Present(arg1))
 					continue;
 				break;
-			case 8:
+			case NOTHERE:
 				if(Object[arg1] != Location())
 					continue;
 				break;
-			case 9:
+			case CARRIED:
 				/*FIXME : or worn ?? */
 				if(Object[arg1] == Carried() || Object[arg1] == Worn())
 					continue;
 				break;
-			case 10:
+			case NOTCARRIED:
 				/*FIXME : or worn ?? */
 				if(Object[arg1] != Carried() && Object[arg1] != Worn())
 					continue;
 				break;
-			case 11:
+			case WORN:
 				if(Object[arg1] == Worn())
 					continue;
 				break;
-			case 12:
+			case NOTWORN:
 				if(Object[arg1] != Worn())
 					continue;
 				break;
-			case 13:
+			case NODESTROYED:
 				if(Object[arg1] != Destroyed())
 					continue;
 				break;
-			case 14:
+			case DESTROYED:
 				if(Object[arg1] == Destroyed())
 					continue;
 				break;
-			case 15:
+			case ZERO:
 				if(Flag[arg1] == 0)
 					continue;
 				break;
-			case 16:
+			case NOTZERO:
 				if(Flag[arg1] != 0)
 					continue;
 				break;
-			case 17:
+			case WORD1:
 				if(Word[2] == arg1)
 					continue;
 				break;
-			case 18:
+			case WORD2:
 				if(Word[3] == arg1)
 					continue;
 				break;
-			case 19:
+			case WORD3:
 				if(Word[4] == arg1)
 					continue;
 				break;
-			case 20:
+			case CHANCE:
 				if(Chance(arg1))
 					continue;
 				break;
-			case 21:
+			case LT:
 				if(Flag[arg1] < arg2)
 					continue;
 				break;
-			case 22:
+			case GT:
 				if(Flag[arg1] > arg2)
 					continue;
 				break;
-			case 23:
+			case EQ:
 				if(Flag[arg1] == arg2)
 					continue;
 				break;
-			case 24:
+			case NE:
 				if(Flag[arg1] != arg2)
 					continue;
 				break;
-			case 25:
+			case OBJECTAT:
 				if(Object[arg1] == arg2)
 					continue;
 				break;
@@ -1355,128 +1355,128 @@ static void ExecuteLineCode(unsigned char *p)
 		}
 
 		switch(op) {
-			case 1:
+			case LOADPROMPT:
 				if (LoadGame())
 					return;
 				break;
-			case 2:
+			case QUIT:
 				QuitGame();
 				break;
-			case 3:
+			case SHOWINVENTORY:
 				Inventory();
 				break;
-			case 4:
+			case ANYKEY:
 				AnyKey();
 				break;
-			case 5:
+			case SAVE:
 				SaveGame();
 				break;
-			case 6:
+			case DROPALL:
 				DropAll();
 				break;
-			case 7:
+			case LOOK:
 				Look();
 				break;
-			case 8:
+			case PRINTOK:
 				/* Guess */
 				SysMessage(OKAY);
 				break;
-			case 9:
+			case GET:
 				GetObject(arg1);
 				break;
-			case 10:
+			case DROP:
 				DropObject(arg1);
 				break;
-			case 11:
+			case GOTO:
 				Goto(arg1);
 				break;
-			case 12:
+			case GOBY:
 				/* Blizzard pass era */
 				if(GameVersion == 1)
 					Goto(Object[arg1]);
 				else
 					Message2(arg1);
 				break;
-			case 13:
+			case SET:
 				Flag[arg1] = 255;
 				break;
-			case 14:
+			case CLEAR:
 				Flag[arg1] = 0;
 				break;
-			case 15:
+			case MESSAGE:
 				Message(arg1);
 				break;
-			case 16:
+			case CREATE:
 				Put(arg1, Location());
 				break;
-			case 17:
+			case DESTROY:
 				Put(arg1, Destroyed());
 				break;
-			case 18:
+			case PRINT:
 				PrintNumber(Flag[arg1]);
 				break;
-			case 19:
+			case DELAY:
 				Delay(arg1);
 				break;
-			case 20:
+			case WEAR:
 				Wear(arg1);
 				break;
-			case 21:
+			case REMOVE:
 				Remove(arg1);
 				break;
-			case 22:
+			case LET:
 				Flag[arg1] = arg2;
 				break;
-			case 23:
+			case ADD:
 				n = Flag[arg1] + arg2;
 				if(n > 255)
 					n = 255;
 				Flag[arg1] = n;
 				break;
-			case 24:
+			case SUB:
 				n = Flag[arg1] - arg2;
 				if(n < 0)
 					n = 0;
 				Flag[arg1] = n;
 				break;
-			case 25:
+			case PUT:
 				Put(arg1, arg2);
 				break;
-			case 26:
+			case SWAP:
 				n = Object[arg1];
 				Put(arg1, Object[arg2]);
 				Put(arg2, n);
 				break;
-			case 27:
+			case SWAPF:
 				n = Flag[arg1];
 				Flag[arg1] = Flag[arg2];
 				Flag[arg2] = n;
 				break;
-			case 28:
+			case MEANS:
 				Means(arg1, arg2);
 				break;
-			case 29:
+			case PUTWITH:
 				Put(arg1, Object[arg2]);
 				break;
-			case 30:
+			case BEEP:
 				/* Beep */
 				putchar('\007');
 				fflush(stdout);
 				break;
-			case 31:
+			case REFRESH:
 				break;
-			case 32:
+			case RAMSAVE:
 				RamSave(1);
 				break;
-			case 33:
+			case RAMLOAD:
 				RamLoad();
 				break;
-			case 34:
+			case CLSLOW:
 				break;
-			case 35:
+			case OOPS:
 				Oops();
 				break;
-			case 36: // DIAGNOSE
+			case DIAGNOSE:
 				Message(223);
 				char buf[5];
 				char *p = buf;
@@ -1494,7 +1494,7 @@ static void ExecuteLineCode(unsigned char *p)
 				}
 				SysMessage(15);
 				break;
-			case 37: // SWITCHINVENTORY
+			case SWITCHINVENTORY:
 			{
 				uint8_t temp = Flag[2];
 				Flag[2] = Flag[3];
@@ -1505,11 +1505,11 @@ static void ExecuteLineCode(unsigned char *p)
 				Redraw = 1;
 				break;
 			}
-			case 38: // SWITCHCHARACTER
+			case SWITCHCHARACTER:
 				Flag[0] = Object[arg1];
 				GetObject(arg1);
 				break;
-			case 39: // DONE
+			case DONE: // DONE
 				ActionsDone = 0;
 				break;
 			default:
