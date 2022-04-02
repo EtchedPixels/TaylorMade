@@ -125,7 +125,7 @@ static char *Action[]={
 	"SWITCHINVENTORY",
 	"SWITCHCHARACTER",
 	"DONE",
-	"ACT40",
+	"IMAGE",
 	"ACT41",
 	"ACT42",
 	"ACT43",
