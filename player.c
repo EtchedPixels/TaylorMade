@@ -227,7 +227,7 @@ static int Q3Action[]={
 	SUB,
 	PUT,
 	SWAP,
-	REFRESH, // Redraw room image
+	IMAGE, // Redraw room image
 	0,
 	0,
 	0,
@@ -1495,6 +1495,8 @@ static void ExecuteLineCode(unsigned char *p)
 				break;
 			case DONE: // DONE
 				ActionsDone = 0;
+				break;
+			case IMAGE:
 				break;
 			default:
 				fprintf(stderr, "Unknown command %d.\n", op);
