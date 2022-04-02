@@ -103,7 +103,7 @@ Drawing Codes:
 0xF6		744E arg1 } set A to 0 4 or 8 and call same method
 0xF5		7444 arg1 }
 0xF4		7458 arg1
-	End of object arg1 is not present
+	End if object arg1 is not present
 0xF3		7409
 0xF2		7331 arg1 arg2 arg3 arg4
 0xF1		73FE
@@ -250,3 +250,30 @@ placed in one setup, with the rooms in the higher banks). Blizzard Pass
 also appears to have a special hack so that there are two ranges of object
 that append to the room description not one. This hack is not yet
 implemented in TaylorMade.
+
+
+Questprobe: Featuring the Human Torch and the Thing
+
+The Questprobe 3 format is substantially different from the other games,
+almost enough to consider it a different engine.
+None of the detection code for the other games works as-is, so Quesprobe 3-
+specific detection has been added to all of the data-finding functions.
+Strings have different end markers (0x1f and 0x18 instead of 0x7e and 0x5e),
+all token text is offset by 0x7b, which the code uses to tell whether a
+character is a token or plain text ascii. The "system messages" are at the
+end rather than the beginning, and in a somewhat different order than the
+later games.
+
+The game uses flags in a different way. Flag 0 is the location of the
+currently active hero, while flag 1 is the location of the other one. In the
+same manner, flag 2 is the value of everything the current character carries,
+while flag 3 holds the "carry room value" for everything the other one is
+holding. So when you switch, flags 0 and 1, and 2 and 3, switch values
+(0<->1, 2<->3). Flag 31 is set if the player currently is Thing, and clear if
+the player is The Human Flame. Darkness is marked by flag 43 instead of 1, and
+the game seems to have no concept of worn objects or inventory limits.
+
+The conditions and actions are also different. The conditions are just fewer,
+but some game-specific actions have been added to deal with the swapping of main
+character and displaying the watch status message. There is also an action
+responsible for drawing "overlay" images on top of the room image.
