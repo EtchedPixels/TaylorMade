@@ -816,7 +816,7 @@ void RamLoad(void)
 
 static void RamSave(int game)
 {
-	memcpy(RamFlag,	 Flag, 128);
+	memcpy(RamFlag, Flag, 128);
 	memcpy(RamObject, Object, 256);
 	if(game)
 		Message(19);
