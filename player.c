@@ -205,8 +205,8 @@ static int Q3Condition[] = {
 
 static int Q3Action[]={
 	ACTIONERROR,
-	SWITCHINVENTORY, // swap TORCH <-> THING
-	DIAGNOSE, // report status
+	SWITCHINVENTORY, /* Swap inventory and dark flag */
+	DIAGNOSE, /* Print Reed Richards' watch status message */
 	LOADPROMPT,
 	QUIT,
 	SHOWINVENTORY,
@@ -216,7 +216,7 @@ static int Q3Action[]={
 	GET,
 	DROP,
 	GOTO,
-	SWITCHCHARACTER, // swap TORCH <-> THING
+	SWITCHCHARACTER, /* Go to the location of the other guy */
 	SET,
 	CLEAR,
 	MESSAGE,
@@ -227,7 +227,7 @@ static int Q3Action[]={
 	SUB,
 	PUT,
 	SWAP,
-	IMAGE, // Redraw room image
+	IMAGE, /* Draw image on top of room image */
 	0,
 	0,
 	0,
@@ -510,7 +510,7 @@ static void PrintTextQ(unsigned char *p, int n)
 	do {
 		if (*p == 0x18)
 			return;
-		if (*p >= 0x7b) // if c is >= 0x7b it is a token
+		if (*p >= 0x7b) /* if c >= 0x7b it is a token, not plaintext */
 			PrintToken(*p);
 		else {
 			OutChar(*p);
@@ -1085,16 +1085,16 @@ static void Means(unsigned char vb, unsigned char no) {
 
 static void UpdateQ3Flags1(void) {
 	if (Flag[31] != 0) { /* I'm Thing */
-		if (Object[2] != 0xfc) { // Torch by the hands
-			Flag[1] = Location();
+		if (Object[2] == 0xfc) { /* "Holding Torch by the hands" object destroyed (not held) */
+			Flag[1] = Object[18]; /* Location of the other guy flag is set to the location of the Human Torch object */
 		} else {
-			Flag[1] = Object[18]; // Location of Torch
+			Flag[1] = Location(); /* Location of the other guy flag is set to the current location */
 		}
 	} else { /* I'm The Human Torch */
-		if (Object[1] == 0xfc) { // Thing by the hands
-			Flag[1] = Object[17]; // Location of Thing
+		if (Object[1] == 0xfc) { /* "Holding Thing by the hands" object is destroyed (not held) */
+			Flag[1] = Object[17]; /* Location of the other guy flag is set to the location of the Thing object */
 		} else {
-			Flag[1] = Location();
+			Flag[1] = Location();  /* Location of the other guy flag is set to the current location */
 		}
 	}
 }
@@ -1103,10 +1103,9 @@ static void UpdateQ3Flags2(void) {
 	if (Flag[52] != 0) {
 		UpdateQ3Flags1();
 		return;
-	}
-	Flag[26]++; // Turns played % 100
+	Flag[26]++; /* Turns played % 100 */
 	if (Flag[26] == 100) {
-		Flag[27]++; // Turns / 100
+		Flag[27]++; /* Turns divided by 100 */
 		Flag[26] = 0;
 	}
 	Flag[47]++;
@@ -1465,13 +1464,17 @@ static void ExecuteLineCode(unsigned char *p)
 				Message(223);
 				char buf[5];
 				char *p = buf;
+				/* Flag[26] = turns % 100, Flag[27] == turns / 100 */
 				snprintf(buf, 5, "%04d", Flag[26] + Flag[27] * 100);
 				while(*p)
 					OutChar(*p++);
 				SysMessage(14);
 				if (Flag[31])
+					/* THING is always 100 percent rested */
 					OutString("100");
 				else {
+					/* Calculate "restedness" percentage */
+					/* Flag[7] == 80 means 100 percent rested */
 					p = buf;
 					snprintf(buf, 4, "%d", (Flag[7] >> 2) + Flag[7]);
 					while(*p)
@@ -1481,18 +1484,18 @@ static void ExecuteLineCode(unsigned char *p)
 				break;
 			case SWITCHINVENTORY:
 			{
-				uint8_t temp = Flag[2];
+				uint8_t temp = Flag[2]; /* Switch inventory */
 				Flag[2] = Flag[3];
 				Flag[3] = temp;
-				temp = Flag[42];
+				temp = Flag[42]; /* Switch dark flag */
 				Flag[42] = Flag[43];
 				Flag[43] = temp;
 				Redraw = 1;
 				break;
 			}
 			case SWITCHCHARACTER:
-				Flag[0] = Object[arg1];
-				GetObject(arg1);
+				Flag[0] = Object[arg1]; /* Go to the location of the other guy */
+				GetObject(arg1); /* Pick him up, so that you don't see yourself */
 				break;
 			case CONTINUE:
 				ActionsDone = 0;
