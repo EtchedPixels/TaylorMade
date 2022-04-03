@@ -739,6 +739,8 @@ static unsigned char MaxCarry()
 
 static int CarryItem(void)
 {
+	if (Questprobe)
+		return 1;
 	if(Flag[5] == MaxCarry())
 		return 0;
 	if(Flag[5] < 255)
@@ -755,7 +757,7 @@ static int Dark(void)
 
 static void DropItem(void)
 {
-	if(Flag[5] > 0)
+	if(!Questprobe && Flag[5] > 0)
 		Flag[5]--;
 }
 
