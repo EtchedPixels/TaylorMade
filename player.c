@@ -1142,11 +1142,14 @@ static void AdjustQuestprobeActions(unsigned char op, unsigned char *arg1, unsig
 		case 22:
 		case 23:
 		case 24:
-			*arg1 += 4;
+			if (arg1 != NULL)
+				*arg1 += 4;
 			break;
 		case 27:
-			*arg1 += 4;
-			*arg2 += 4;
+			if (arg1 != NULL)
+				*arg1 += 4;
+			if (arg2 != NULL)
+				*arg2 += 4;
 			break;
 		default:
 			break;
@@ -1165,16 +1168,22 @@ static void ExecuteLineCode(unsigned char *p)
 		p++;
 		arg1 = *p++;
 #ifdef DEBUG
-		if (Questprobe)
-			fprintf(stderr, "%s %d ", Condition[Q3Condition[op]], arg1);
-		else
+		if (Questprobe) {
+			unsigned char debugarg1 = arg1;
+			AdjustQuestprobeConditions(Q3Condition[op], &debugarg1);
+			fprintf(stderr, "%s %d ", Condition[Q3Condition[op]], debugarg1);
+		} else {
 			fprintf(stderr, "%s %d ", Condition[op], arg1);
+		}
 #endif
 		if((Questprobe && op > 15) || (!Questprobe && op > 20))
 		{
 			arg2 = *p++;
 #ifdef DEBUG
-			fprintf(stderr, "%d ", arg2);
+		unsigned char debugarg2 = arg2;
+		if (Questprobe)
+			AdjustQuestprobeConditions(Q3Condition[op], &debugarg2);
+		fprintf(stderr, "%d ", debugarg2);
 #endif
 		}
 
@@ -1323,13 +1332,19 @@ static void ExecuteLineCode(unsigned char *p)
 		if(op > 8) {
 			arg1 = *p++;
 #ifdef DEBUG
-			fprintf(stderr, "%d ", arg1);
+			unsigned char debugarg1 = arg1;
+			if (Questprobe)
+				AdjustQuestprobeActions(Q3Action[op], &debugarg1, NULL);
+			fprintf(stderr, "%d ", debugarg1);
 #endif
 		}
 		if((Questprobe && op > 17) || (!Questprobe && op > 21)) {
 			arg2 = *p++;
 #ifdef DEBUG
-			fprintf(stderr, "%d ", arg2);
+			unsigned char debugarg2 = arg2;
+			if (Questprobe)
+				AdjustQuestprobeActions(Q3Action[op], NULL, &debugarg2);
+			fprintf(stderr, "%d ", debugarg2);
 #endif
 		}
 
