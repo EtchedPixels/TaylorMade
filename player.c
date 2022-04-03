@@ -42,6 +42,16 @@ static int GameVersion;
 static int Blizzard;
 static int Questprobe;
 
+#define OtherGuyLoc (Flag[1])
+#define OtherGuyInv (Flag[3])
+#define TurnsLow (Flag[26])
+#define TurnsHigh (Flag[27])
+#define IsThing (Flag[31])
+#define ThingAsphyx (Flag[47])
+#define TorchAsphyx (Flag[48])
+#define WaitNumber (Flag[5])
+#define Resting (Flag[52])
+
 #ifdef DEBUG
 
 /*
@@ -772,7 +782,7 @@ static void Put(unsigned char obj, unsigned char loc)
 static int Present(unsigned char obj)
 {
 	unsigned char v = Object[obj];
-	if(v == Location() || v == Worn() || v == Carried() || (Questprobe && v == Flag[3] && Flag[1] == Location()))
+	if(v == Location() || v == Worn() || v == Carried() || (Questprobe && v == OtherGuyInv && OtherGuyLoc == Location()))
 		return 1;
 	return 0;
 }
@@ -950,7 +960,7 @@ static void GetObject(unsigned char obj) {
 		SysMessage(YOU_HAVE_IT);
 		return;
 	}
-	if (!(Questprobe && Flag[1] == Location() && Object[obj] == Flag[3])) {
+	if (!(Questprobe && OtherGuyLoc == Location() && Object[obj] == OtherGuyInv)) {
 		if(Object[obj] != Location()) {
 			SysMessage(YOU_DONT_SEE_IT);
 			return;
@@ -1085,38 +1095,40 @@ static void Means(unsigned char vb, unsigned char no) {
 	Word[1] = no;
 }
 
-static void UpdateQ3Flags1(void) {
-	if (Flag[31] != 0) { /* I'm Thing */
-		if (Object[2] == 0xfc) { /* "Holding Torch by the hands" object destroyed (not held) */
-			Flag[1] = Object[18]; /* Location of the other guy flag is set to the location of the Human Torch object */
+static void UpdateQ3FlagsWhenHoldingOtherGuy(void) {
+	if (IsThing) {
+		if (Object[2] == 0xfc) {
+			/* If the "holding HUMAN TORCH by the hands" object is destroyed (i.e. not held) */
+			/* the "location of the other guy" flag is set to the location of the Human Torch object */
+			OtherGuyLoc = Object[18];
 		} else {
-			Flag[1] = Location(); /* Location of the other guy flag is set to the current location */
+			OtherGuyLoc = Location();
 		}
-	} else { /* I'm The Human Torch */
-		if (Object[1] == 0xfc) { /* "Holding Thing by the hands" object is destroyed (not held) */
-			Flag[1] = Object[17]; /* Location of the other guy flag is set to the location of the Thing object */
+	} else { /* I'm the HUMAN TORCH */
+		if (Object[1] == 0xfc) {
+			/* If the "holding THING by the hands" object is destroyed (i.e. not held) */
+			/* The "location of the other guy" flag is set to the location of the Thing object */
+			OtherGuyLoc = Object[17];
 		} else {
-			Flag[1] = Location();  /* Location of the other guy flag is set to the current location */
+			OtherGuyLoc = Location();
 		}
 	}
 }
 
-static void UpdateQ3Flags2(void) {
-	if (Flag[52] != 0) {
-		UpdateQ3Flags1();
+static void UpdateQ3Timers(void) {
+	if (Resting != 0)
 		return;
-	Flag[26]++; /* Turns played % 100 */
-	if (Flag[26] == 100) {
-		Flag[27]++; /* Turns divided by 100 */
-		Flag[26] = 0;
+	TurnsLow++; /* Turns played % 100 */
+	if (TurnsLow == 100) {
+		TurnsHigh++; /* Turns divided by 100 */
+		TurnsLow = 0;
 	}
-	Flag[47]++;
-	if (Flag[47] == 0)
-		Flag[47] = 0xff;
-	Flag[48]++;
-	if (Flag[48] == 0)
-		Flag[48] = 0xff;
-	UpdateQ3Flags1();
+	ThingAsphyx++; // Turns since Thing started holding breath
+	if (ThingAsphyx == 0)
+		ThingAsphyx = 0xff;
+	TorchAsphyx++; // Turns since Torch started holding breath
+	if (TorchAsphyx == 0)
+		TorchAsphyx = 0xff;
 }
 
 /* Questprobe 3 numbers the flags differently, so we have to offset them by 4 */
@@ -1481,12 +1493,12 @@ static void ExecuteLineCode(unsigned char *p)
 				Message(223);
 				char buf[5];
 				char *p = buf;
-				/* Flag[26] = turns % 100, Flag[27] == turns / 100 */
-				snprintf(buf, 5, "%04d", Flag[26] + Flag[27] * 100);
+				/* TurnsLow = turns % 100, TurnsHigh == turns / 100 */
+				snprintf(buf, 5, "%04d", TurnsLow + TurnsHigh * 100);
 				while(*p)
 					OutChar(*p++);
 				SysMessage(14);
-				if (Flag[31])
+				if (IsThing)
 					/* THING is always 100 percent rested */
 					OutString("100");
 				else {
@@ -1578,8 +1590,10 @@ static void RunStatusTable(void)
 	ActionsDone = 0;
 	ActionsExecuted = 0;
 
-	if (Questprobe)
-		UpdateQ3Flags2();
+	if (Questprobe) {
+		UpdateQ3Timers();
+		UpdateQ3FlagsWhenHoldingOtherGuy();
+	}
 
 	while(*p != 0x7F) {
 		while (Questprobe && *p == 0x7e) {
@@ -1729,7 +1743,7 @@ static void SimpleParser(void)
 	OutFlush();
 	if(Questprobe) {
 		if (Location() != 6) {
-			if (Flag[31] == 0)
+			if (IsThing == 0)
 				SysMessage(8);
 			else
 				SysMessage(9);
