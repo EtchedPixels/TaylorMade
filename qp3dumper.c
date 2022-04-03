@@ -147,7 +147,7 @@ static char *Action[]={
 	"DIAGNOSE",
 	"SWITCHINVENTORY",
 	"SWITCHCHARACTER",
-	"DONE",
+	"CONTINUE",
 	"IMAGE",
 	"ACT41",
 	"ACT42",
@@ -170,7 +170,7 @@ static int Q3Action[]={
 	SHOWINVENTORY,
 	ANYKEY,
 	SAVE,
-	DONE, // set flag 118 to 1?
+	CONTINUE, // set flag 118 to 1?
 	GET,
 	DROP,
 	GOTO,
@@ -425,6 +425,45 @@ static void NewGame(void)
 	memcpy(Object, Image + ObjLocBase, 49);
 }
 
+/* Questprobe 3 numbers the flags differently, so we have to offset them by 4 */
+static void AdjustQuestprobeConditions(unsigned char op, unsigned char *arg1)
+{
+	switch (op) {
+		case 15:
+		case 16:
+		case 21:
+		case 22:
+		case 23:
+		case 24:
+			*arg1 += 4;
+			break;
+		default:
+			break;
+	}
+}
+
+static void AdjustQuestprobeActions(unsigned char op, unsigned char *arg1, unsigned char *arg2)
+{
+	switch (op) {
+		case 13:
+		case 14:
+		case 22:
+		case 23:
+		case 24:
+			if (arg1 != NULL)
+				*arg1 += 4;
+			break;
+		case 27:
+			if (arg1 != NULL)
+				*arg1 += 4;
+			if (arg2 != NULL)
+				*arg2 += 4;
+			break;
+		default:
+			break;
+	}
+}
+
 static void ExecuteLineCode(unsigned char *p)
 {
 	unsigned char arg1 = 0, arg2 = 0;
@@ -435,6 +474,7 @@ static void ExecuteLineCode(unsigned char *p)
 			break;
 		p++;
 		arg1 = *p++;
+		AdjustQuestprobeConditions(Q3Condition[op], &arg1);
 		printf("%s %d ", Condition[Q3Condition[op]], arg1);
 		if(op > 15)
 		{
@@ -458,10 +498,12 @@ static void ExecuteLineCode(unsigned char *p)
 
 		if((op & 0x3F) > 8) {
 			arg1 = *p++;
+			AdjustQuestprobeActions(Q3Action[op & 0x3F], &arg1, NULL);
 			printf("%d ", arg1);
 		}
 		if((op & 0x3F) > 17) {
 			arg2 = *p++;
+			AdjustQuestprobeActions(Q3Action[op & 0x3F], NULL, &arg2);
 			printf("%d ", arg2);
 		}
 		if(op & 0x40)
