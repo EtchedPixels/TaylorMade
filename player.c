@@ -1681,11 +1681,19 @@ static void RunOneInput(void)
 	RunCommandTable();
 
 	if(ActionsExecuted == 0) {
-		if(Word[0] < 11)
-			SysMessage(YOU_CANT_GO_THAT_WAY);
-		else
-			SysMessage(THATS_BEYOND_MY_POWER);
-		return;
+		if (Word[1] != 0 && Word[0] != Word[1]) {
+			unsigned char temp = Word[0];
+			Word[0] = Word[1];
+			Word[1] = temp;
+			RunCommandTable();
+		}
+		if(ActionsExecuted == 0) {
+			if((Questprobe && Word[0] < 7) || (!Questprobe && Word[0] < 11))
+				SysMessage(YOU_CANT_GO_THAT_WAY);
+			else
+				SysMessage(THATS_BEYOND_MY_POWER);
+			return;
+		}
 	}
 	if(Redraw)
 		Look();
