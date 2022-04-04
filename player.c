@@ -49,8 +49,6 @@ static int Questprobe;
 #define IsThing (Flag[31])
 #define ThingAsphyx (Flag[47])
 #define TorchAsphyx (Flag[48])
-#define WaitNumber (Flag[5])
-#define Resting (Flag[52])
 
 #ifdef DEBUG
 
@@ -1095,7 +1093,19 @@ static void Means(unsigned char vb, unsigned char no) {
 	Word[1] = no;
 }
 
-static void UpdateQ3FlagsWhenHoldingOtherGuy(void) {
+static void UpdateQ3Flags(void) {
+	TurnsLow++; /* Turns played % 100 */
+	if (TurnsLow == 100) {
+		TurnsHigh++; /* Turns divided by 100 */
+		TurnsLow = 0;
+	}
+	ThingAsphyx++; // Turns since Thing started holding breath
+	if (ThingAsphyx == 0)
+		ThingAsphyx = 0xff;
+	TorchAsphyx++; // Turns since Torch started holding breath
+	if (TorchAsphyx == 0)
+		TorchAsphyx = 0xff;
+
 	if (IsThing) {
 		if (Object[2] == 0xfc) {
 			/* If the "holding HUMAN TORCH by the hands" object is destroyed (i.e. not held) */
@@ -1113,22 +1123,6 @@ static void UpdateQ3FlagsWhenHoldingOtherGuy(void) {
 			OtherGuyLoc = Location();
 		}
 	}
-}
-
-static void UpdateQ3Timers(void) {
-	if (Resting != 0)
-		return;
-	TurnsLow++; /* Turns played % 100 */
-	if (TurnsLow == 100) {
-		TurnsHigh++; /* Turns divided by 100 */
-		TurnsLow = 0;
-	}
-	ThingAsphyx++; // Turns since Thing started holding breath
-	if (ThingAsphyx == 0)
-		ThingAsphyx = 0xff;
-	TorchAsphyx++; // Turns since Torch started holding breath
-	if (TorchAsphyx == 0)
-		TorchAsphyx = 0xff;
 }
 
 /* Questprobe 3 numbers the flags differently, so we have to offset them by 4 */
@@ -1591,8 +1585,7 @@ static void RunStatusTable(void)
 	ActionsExecuted = 0;
 
 	if (Questprobe) {
-		UpdateQ3Timers();
-		UpdateQ3FlagsWhenHoldingOtherGuy();
+		UpdateQ3Flags();
 	}
 
 	while(*p != 0x7F) {
