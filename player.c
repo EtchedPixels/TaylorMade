@@ -1048,7 +1048,7 @@ static void Look(void) {
 
 static void Goto(unsigned char loc) {
 	Flag[0] = loc;
-	Redraw = 1;
+	Look();
 }
 
 static void Delay(unsigned char n) {
@@ -1353,6 +1353,8 @@ static void ExecuteLineCode(unsigned char *p)
 			AdjustQuestprobeActions(op, &arg1, &arg2);
 		}
 
+		int WasDark = Dark();
+
 		switch(op) {
 			case LOADPROMPT:
 				if (LoadGame())
@@ -1513,14 +1515,18 @@ static void ExecuteLineCode(unsigned char *p)
 				GetObject(arg1); /* Pick him up, so that you don't see yourself */
 				break;
 			case CONTINUE:
-				ActionsDone = 0;
+				ActionsDone = 1;
 				break;
 			case IMAGE:
+				Flag[52] = 0;
 				break;
 			default:
 				fprintf(stderr, "Unknown command %d.\n", op);
 				break;
 		}
+
+		if (Dark() != WasDark)
+			Look();
 	}
 	while(1);
 #ifdef DEBUG
