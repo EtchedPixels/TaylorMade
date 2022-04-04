@@ -321,16 +321,8 @@ static int FindExits(void)
 		return pos;
 	}
 
-	/* Questprobe */
-	pos = FindCode("\x80\x81\x03\x05\x82\x83\x84\x02\x09\x03\x0E\x04\x0F", 0);
-
-	if(pos == -1) {
-		fprintf(stderr, "Cannot find initial exit data.\n");
-		exit(1);
-	} else {
-		return pos;
-	}
-
+	fprintf(stderr, "Cannot find initial exit data.\n");
+	exit(1);
 }
 
 static int LooksLikeTokens(int pos)
