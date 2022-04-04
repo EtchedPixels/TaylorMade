@@ -1663,7 +1663,7 @@ static void RunOneInput(void)
 		SysMessage(I_DONT_UNDERSTAND);
 		return;
 	}
-	if(Word[0] < 11) {
+	if ((Questprobe && Word[0] < 7) || (!Questprobe && Word[0] < 11)) {
 		if(AutoExit(Word[0])) {
 			if(Redraw)
 				Look();
