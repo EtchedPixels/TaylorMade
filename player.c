@@ -550,6 +550,9 @@ static unsigned char NumObjects()
 
 static int CarryItem(void)
 {
+    /* Blizzard Pass has no inventory limit */
+    if (Blizzard)
+        return 1;
 	if(Flag[5] == Flag[4])
 		return 0;
 	if(Flag[5] < 255)
