@@ -690,7 +690,7 @@ void DumpRooms(void)
 }
 
 void PrintConditionAddresses(void) {
-	fprintf(stderr, "Memory adresses of conditions\n\n");
+	printf("Memory adresses of conditions\n\n");
 	uint16_t conditionsOffsets = 0x96a6 - 0x4000 + 2;
 	uint8_t *conditions;
 	conditions = &Image[conditionsOffsets];
@@ -698,13 +698,13 @@ void PrintConditionAddresses(void) {
 		uint16_t address = *conditions++;
 		address += *conditions * 256;
 		conditions++;
-		fprintf(stderr, "Condition %02d: 0x%04x (%s)\n", i, address, Condition[Q3Condition[i]]);
+		printf("Condition %02d: 0x%04x (%s)\n", i, address, Condition[Q3Condition[i]]);
 	}
-	fprintf(stderr, "\n");
+	printf("\n");
 }
 
 void PrintActionAddresses(void) {
-	fprintf(stderr, "Memory adresses of actions\n\n");
+	printf("Memory adresses of actions\n\n");
 	uint16_t actionOffsets = 0x991a - 0x4000 + 2;
 	uint8_t *actions;
 	actions = &Image[actionOffsets];
@@ -712,9 +712,9 @@ void PrintActionAddresses(void) {
 		uint16_t address = *actions++;
 		address += *actions * 256;
 		actions++;
-		fprintf(stderr, "   Action %02d: 0x%04x (%s)\n", i, address, Action[Q3Action[i]]);
+		printf("   Action %02d: 0x%04x (%s)\n", i, address, Action[Q3Action[i]]);
 	}
-	fprintf(stderr, "\n");
+	printf("\n");
 }
 
 int main(int argc, char *argv[])
